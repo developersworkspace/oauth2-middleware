@@ -13,7 +13,9 @@ export class OAuth2Middleware {
         this.router = express.Router();
 
         this.router.get('/login', (req: Request, res: Response, next: Function) => { this.login(req, res, next); });
+        this.router.post('/login', (req: Request, res: Response, next: Function) => { this.submitLogin(req, res, next); });
         this.router.get('/authorize', (req: Request, res: Response, next: Function) => { this.authorize(req, res, next); });
+        this.router.get('/token', (req: Request, res: Response, next: Function) => { this.token(req, res, next); });
     }
 
     private login(req: Request, res: Response, next: Function) {
@@ -21,13 +23,50 @@ export class OAuth2Middleware {
         let id = req.query.id;
 
         this.findAuthorizeInformationById(id).then((result: any) => {
-            return this.findNameByClientId(result.clienId);
+            return this.findNameByClientId(result.clientId);
         }).then((result: string) => {
             this.renderPage(res, 'login.html', {
-                name: result
+                id: id,
+                name: result,
+                message: null
             });
         });
 
+    }
+
+    private submitLogin(req: Request, res: Response, next: Function) {
+
+        let username = req.body.username;
+        let password = req.body.password;
+        let id = req.query.id;
+
+        let authorizeInformation = null;
+
+        this.findAuthorizeInformationById(id).then((result: any) => {
+            authorizeInformation = result;
+
+            if (authorizeInformation == null) {
+                return false;
+            }
+
+            return this.validateCredentials(authorizeInformation.clientId, username, password);
+        }).then((result: Boolean) => {
+            if (result) {
+                return this.generateToken(authorizeInformation.clientId, username);
+            }
+
+            return null;
+        }).then((result: string) => {
+            if (result == null) {
+                this.renderPage(res, 'login.html', {
+                    id: id,
+                    name: result,
+                    message: 'Invalid username or password'
+                });
+            } else {
+                res.redirect(`${authorizeInformation.redirectUri}?token=${result}`);
+            }
+        });
     }
 
     private authorize(req: Request, res: Response, next: Function) {
@@ -38,7 +77,7 @@ export class OAuth2Middleware {
         let scope = req.query.scope;
 
 
-        this.validateClientId(clientId).then((result: Boolean) => {
+        this.validateClientId(clientId, redirectUri).then((result: Boolean) => {
             if (result) {
                 return false;
             }
@@ -51,6 +90,14 @@ export class OAuth2Middleware {
                 res.redirect(`login?id=${id}`);
             }
         });
+    }
+
+    private token(req: Request, res: Response, next: Function) {
+        let clientId = req.query.client_id;
+        let clientSecret = req.query.client_secret;
+        let grantType = req.query.grant_type;
+        let code = req.query.code;
+        let redirectUri = req.query.redirect_uri;
     }
 
     private renderPage(res: Response, htmlFile: string, data: any) {
@@ -69,9 +116,18 @@ export class OAuth2Middleware {
         });
     }
 
+    private generateToken(clientId: string, username: string): Promise<string> {
+        return Promise.resolve('123');
+    }
+
+    private validateCredentials(clientId: string, username: string, password: string): Promise<Boolean> {
+        return Promise.resolve(true);
+    }
+
     private findAuthorizeInformationById(id: string): Promise<any> {
         return Promise.resolve({
-            clientId: '1234'
+            clientId: '1234',
+            redirectUri: 'http://worldofrations.local/login'
         });
     }
 
@@ -79,7 +135,7 @@ export class OAuth2Middleware {
         return Promise.resolve('World of Rations');
     }
 
-    private validateClientId(clientId: string): Promise<Boolean> {
+    private validateClientId(clientId: string, redirectUri: string): Promise<Boolean> {
         return Promise.resolve(true);
     }
 
