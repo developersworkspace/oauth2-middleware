@@ -5,11 +5,17 @@ import * as uuid from 'uuid';
 import * as fs from 'graceful-fs';
 import * as Handlebars from 'handlebars';
 
+// Imports repositories
+import { Repository } from './repository';
+
 export class OAuth2Middleware {
 
     router: Router;
+    repository: Repository;
 
     constructor(private fn: any) {
+        this.repository = new Repository();
+
         this.router = express.Router();
 
         this.router.get('/login', (req: Request, res: Response, next: Function) => { this.login(req, res, next); });
@@ -21,6 +27,11 @@ export class OAuth2Middleware {
     private login(req: Request, res: Response, next: Function) {
 
         let id = req.query.id;
+
+        if (id == null || id == '') {
+            res.send('id cannot be empty');
+            return;
+        }
 
         this.findAuthorizeInformationById(id).then((result: any) => {
             return this.findNameByClientId(result.clientId);
@@ -52,7 +63,7 @@ export class OAuth2Middleware {
             return this.validateCredentials(authorizeInformation.clientId, username, password);
         }).then((result: Boolean) => {
             if (result) {
-                return this.generateToken(authorizeInformation.clientId, username);
+                return this.generateToken(id, authorizeInformation.clientId, username);
             }
 
             return null;
@@ -76,18 +87,17 @@ export class OAuth2Middleware {
         let redirectUri = req.query.redirect_uri;
         let scope = req.query.scope;
 
-
         this.validateClientId(clientId, redirectUri).then((result: Boolean) => {
-            if (result) {
+            if (!result) {
                 return false;
             }
             return this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
         }).then((result: Boolean) => {
 
             if (result) {
-                res.status(500).send('ERROR!!');
-            } else {
                 res.redirect(`login?id=${id}`);
+            } else {
+                res.status(500).send('ERROR!!');
             }
         });
     }
@@ -98,6 +108,28 @@ export class OAuth2Middleware {
         let grantType = req.query.grant_type;
         let code = req.query.code;
         let redirectUri = req.query.redirect_uri;
+
+        this.validateToken(clientId, clientSecret, code, redirectUri).then((result: Boolean) => {
+            if (result) {
+                return this.findUsernameByToken(code);
+            }
+
+            return null;
+        }).then((result: string) => {
+            if (result == null) {
+                return null;
+            }
+
+            return this.generateAccessTokenObject(code, clientId, result);
+        }).then((result: any) => {
+            if (result == null) {
+                res.status(500).send('Error!!');
+            }
+            else {
+                res.json(result);
+            }
+
+        });
     }
 
     private renderPage(res: Response, htmlFile: string, data: any) {
@@ -116,8 +148,64 @@ export class OAuth2Middleware {
         });
     }
 
-    private generateToken(clientId: string, username: string): Promise<string> {
-        return Promise.resolve('123');
+    private validateToken(clientId: string, clientSecret: string, token: string, redirectUri: string): Promise<Boolean> {
+        return this.repository.findTokenByToken(token).then((result: any) => {
+            if (result == null) {
+                return null;
+            }
+
+            return this.findAuthorizeInformationById(result.id);
+        }).then((result: any) => {
+            if (result == null) {
+                return null;
+            }
+
+            if (result.clientId != clientId) {
+                return null;
+            }
+
+            if (result.redirectUri != redirectUri) {
+                return null;
+            }
+
+
+            return this.repository.findClientByClientId(clientId);
+        }).then((result: any) => {
+            if (result == null) {
+                return false;
+            }
+
+            if (result.clientSecret != clientSecret) {
+                return false;
+            }
+
+            return true;
+        })
+    }
+
+    private generateToken(id: string, clientId: string, username: string): Promise<string> {
+        let token = uuid.v4();
+        return this.repository.saveToken(id, token, clientId, username).then((result: Boolean) => {
+            return token;
+        });
+    }
+
+    private generateAccessTokenObject(token: string, clientId: string, username: string): Promise<any> {
+        return Promise.resolve({
+            "access_token": "ACCESS_TOKEN",
+            "token_type": "bearer",
+            "expires_in": 2592000,
+            "scope": "read",
+            "uid": 100101,
+            "info": {
+                "name": "Mark E. Mark",
+                "email": "mark@thefunkybunch.com"
+            }
+        });
+    }
+
+    private findUsernameByToken(token: string): Promise<string> {
+        return Promise.resolve('developersworkspace');
     }
 
     private validateCredentials(clientId: string, username: string, password: string): Promise<Boolean> {
@@ -125,26 +213,34 @@ export class OAuth2Middleware {
     }
 
     private findAuthorizeInformationById(id: string): Promise<any> {
-        return Promise.resolve({
-            clientId: '1234',
-            redirectUri: 'http://worldofrations.local/login'
-        });
+        return this.repository.findAuthorizeInformationById(id);
     }
 
     private findNameByClientId(clientId: string): Promise<string> {
-        return Promise.resolve('World of Rations');
+        return this.repository.findClientByClientId(clientId).then((result: any) => {
+            return result.name;
+        });
     }
 
     private validateClientId(clientId: string, redirectUri: string): Promise<Boolean> {
-        return Promise.resolve(true);
+        return this.repository.findClientByClientId(clientId).then((result: any) => {
+            if (result == null) {
+                return false;
+            }
+
+            if (result.redirectUris.indexOf(redirectUri) > -1) {
+                return false;
+            }
+            return true;
+        });
     }
 
     private saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean> {
-        return Promise.resolve(true);
+        return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
     }
 
 }
 
-// http://localhost:3000/auth/authorize?response_type=code&client_id=CLIENT_ID&redirect_uri=CALLBACK_URL&scope=read
-
+// http://localhost:3000/auth/authorize?response_type=code&client_id=1234567890&redirect_uri=http://demo1.local/callback&scope=read
+// http://localhost:3000/auth/token?client_id=CLIENT_ID&client_secret=CLIENT_SECRET&grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=CALLBACK_URL
 
