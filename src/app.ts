@@ -2,7 +2,7 @@
 import express = require("express");
 import bodyParser = require('body-parser');
 
-import * as authRouter from './router';
+import { OAuth2Middleware } from './router';
 
 export class WebApi {
 
@@ -17,7 +17,7 @@ export class WebApi {
     }
 
     private configureRoutes(app: express.Express) {
-        app.use("/auth", authRouter);
+        app.use("/auth", new OAuth2Middleware(new TestFn()).router);
     }
 
     public getApp() {
@@ -27,6 +27,10 @@ export class WebApi {
     public run() {
         this.app.listen(this.port);
     }
+}
+
+class TestFn {
+
 }
 
 let port = 3000;
