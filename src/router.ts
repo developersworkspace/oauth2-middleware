@@ -28,14 +28,23 @@ export class OAuth2Middleware {
 
         let id = req.query.id;
 
-        if (id == null || id == '') {
-            res.send('id cannot be empty');
+        if (this.isEmptyOrSpace(id)) {
+            res.status(400).send('Invalid parameters provided');
             return;
         }
 
         this.findAuthorizeInformationById(id).then((result: any) => {
+            if (result == null) {
+                return null;
+            }
             return this.findNameByClientId(result.clientId);
         }).then((result: string) => {
+
+            if (result == null) {
+                res.status(400).send('Invalid parameters provided');
+                return;
+            }
+
             this.renderPage(res, 'login.html', {
                 id: id,
                 name: result,
@@ -68,7 +77,7 @@ export class OAuth2Middleware {
 
             return null;
         }).then((result: string) => {
-            if (result == null) {               
+            if (result == null) {
                 this.renderPage(res, 'login.html', {
                     id: id,
                     name: result,
@@ -106,7 +115,7 @@ export class OAuth2Middleware {
             if (result) {
                 res.redirect(`login?id=${id}`);
             } else {
-                res.status(500).send('ERROR!!');
+                res.status(401).end();
             }
         });
     }
@@ -117,6 +126,15 @@ export class OAuth2Middleware {
         let grantType = req.query.grant_type;
         let code = req.query.code;
         let redirectUri = req.query.redirect_uri;
+        if (this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(clientSecret) || this.isEmptyOrSpace(grantType) || this.isEmptyOrSpace(code) || this.isEmptyOrSpace(redirectUri)) {
+            res.status(400).send('Invalid parameters provided');
+            return;
+        }
+
+        if (grantType != 'authorization_code') {
+            res.status(400).send('Invalid grant_type provided');
+            return;
+        }
 
         this.validateToken(clientId, clientSecret, code, redirectUri).then((result: Boolean) => {
             if (result) {
@@ -132,7 +150,7 @@ export class OAuth2Middleware {
             return this.generateAccessTokenObject(code, clientId, result, 'read');
         }).then((result: any) => {
             if (result == null) {
-                res.status(500).send('Error!!');
+                res.status(401).end();
             }
             else {
                 res.json(result);
@@ -228,7 +246,7 @@ export class OAuth2Middleware {
     private validateCredentials(clientId: string, username: string, password: string): Promise<Boolean> {
         if (username == 'demousername' && password == 'demopassword') {
             return Promise.resolve(true);
-        }else {
+        } else {
             return Promise.resolve(false);
         }
     }
