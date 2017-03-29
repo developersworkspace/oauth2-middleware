@@ -87,13 +87,22 @@ export class OAuth2Middleware {
         let redirectUri = req.query.redirect_uri;
         let scope = req.query.scope;
 
+        if (this.isEmptyOrSpace(responseType) || this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(redirectUri) || this.isEmptyOrSpace(scope)) {
+            res.status(400).send('Invalid parameters provided');
+            return;
+        }
+
+        if (responseType != 'code') {
+            res.status(400).send('Invalid response_type provided');
+            return;
+        }
+
         this.validateClientId(clientId, redirectUri).then((result: Boolean) => {
             if (!result) {
                 return false;
             }
             return this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
         }).then((result: Boolean) => {
-
             if (result) {
                 res.redirect(`login?id=${id}`);
             } else {
@@ -120,7 +129,7 @@ export class OAuth2Middleware {
                 return null;
             }
 
-            return this.generateAccessTokenObject(code, clientId, result);
+            return this.generateAccessTokenObject(code, clientId, result, 'read');
         }).then((result: any) => {
             if (result == null) {
                 res.status(500).send('Error!!');
@@ -153,7 +162,6 @@ export class OAuth2Middleware {
             if (result == null) {
                 return null;
             }
-
             return this.findAuthorizeInformationById(result.id);
         }).then((result: any) => {
             if (result == null) {
@@ -190,13 +198,16 @@ export class OAuth2Middleware {
         });
     }
 
-    private generateAccessTokenObject(token: string, clientId: string, username: string): Promise<any> {
+    private generateAccessTokenObject(token: string, clientId: string, username: string, scope: string): Promise<any> {
+
+        let accessToken = uuid.v4();
+        let expiresIn = 2592000;
+
         return Promise.resolve({
-            "access_token": "ACCESS_TOKEN",
+            "access_token": accessToken,
             "token_type": "bearer",
-            "expires_in": 2592000,
-            "scope": "read",
-            "uid": 100101,
+            "expires_in": expiresIn,
+            "scope": scope,
             "info": {
                 "name": "Mark E. Mark",
                 "email": "mark@thefunkybunch.com"
@@ -228,7 +239,7 @@ export class OAuth2Middleware {
                 return false;
             }
 
-            if (result.redirectUris.indexOf(redirectUri) > -1) {
+            if (result.redirectUris.indexOf(redirectUri) == -1) {
                 return false;
             }
             return true;
@@ -239,8 +250,16 @@ export class OAuth2Middleware {
         return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
     }
 
+    private isEmptyOrSpace(str) {
+        return str == undefined || str === null || str.match(/^ *$/) !== null;
+    }
+
 }
 
 // http://localhost:3000/auth/authorize?response_type=code&client_id=1234567890&redirect_uri=http://demo1.local/callback&scope=read
 // http://localhost:3000/auth/token?client_id=CLIENT_ID&client_secret=CLIENT_SECRET&grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=CALLBACK_URL
+
+
+
+// http://localhost:3000/auth/token?client_id=1234567890&client_secret=0987654321&grant_type=authorization_code&code=32efbb19-9451-44d5-8d83-eb9cee0edc77&redirect_uri=http://demo2.local/callback
 
