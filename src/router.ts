@@ -40,7 +40,7 @@ export class OAuth2Middleware {
                 id: id,
                 name: result,
                 message: null
-            });
+            }, 200);
         });
 
     }
@@ -68,12 +68,12 @@ export class OAuth2Middleware {
 
             return null;
         }).then((result: string) => {
-            if (result == null) {
+            if (result == null) {               
                 this.renderPage(res, 'login.html', {
                     id: id,
                     name: result,
                     message: 'Invalid username or password'
-                });
+                }, 401);
             } else {
                 res.redirect(`${authorizeInformation.redirectUri}?token=${result}`);
             }
@@ -141,7 +141,7 @@ export class OAuth2Middleware {
         });
     }
 
-    private renderPage(res: Response, htmlFile: string, data: any) {
+    private renderPage(res: Response, htmlFile: string, data: any, status: number) {
 
         fs.readFile(`${__dirname}/${htmlFile}`, 'utf8', (err: Error, html: string) => {
             if (err) {
@@ -152,7 +152,7 @@ export class OAuth2Middleware {
 
             let result = template(data);
 
-            res.send(result);
+            res.status(status).send(result);
 
         });
     }
@@ -216,11 +216,21 @@ export class OAuth2Middleware {
     }
 
     private findUsernameByToken(token: string): Promise<string> {
-        return Promise.resolve('developersworkspace');
+        return this.repository.findTokenByToken(token).then((result: any) => {
+            if (result == null) {
+                return null;
+            }
+
+            return result.username;
+        });
     }
 
     private validateCredentials(clientId: string, username: string, password: string): Promise<Boolean> {
-        return Promise.resolve(true);
+        if (username == 'demousername' && password == 'demopassword') {
+            return Promise.resolve(true);
+        }else {
+            return Promise.resolve(false);
+        }
     }
 
     private findAuthorizeInformationById(id: string): Promise<any> {
