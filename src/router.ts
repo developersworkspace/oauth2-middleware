@@ -6,15 +6,13 @@ import * as fs from 'graceful-fs';
 import * as Handlebars from 'handlebars';
 
 // Imports repositories
-import { Repository } from './repository';
+import { IRepository } from './repository';
 
 export class OAuth2Middleware {
 
     router: Router;
-    repository: Repository;
 
-    constructor(private fn: any) {
-        this.repository = new Repository();
+    constructor(private validateCredentialsFn: Function, private repository: IRepository) {
 
         this.router = express.Router();
 
@@ -98,11 +96,13 @@ export class OAuth2Middleware {
 
         if (this.isEmptyOrSpace(responseType) || this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(redirectUri) || this.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
+            console.log('A');
             return;
         }
 
         if (responseType != 'code') {
             res.status(400).send('Invalid response_type provided');
+            console.log('B');
             return;
         }
 
@@ -222,13 +222,12 @@ export class OAuth2Middleware {
         let expiresIn = 2592000;
 
         return Promise.resolve({
-            "access_token": accessToken,
-            "token_type": "bearer",
-            "expires_in": expiresIn,
-            "scope": scope,
-            "info": {
-                "name": "Mark E. Mark",
-                "email": "mark@thefunkybunch.com"
+            access_token: accessToken,
+            token_type: "bearer",
+            expires_in: expiresIn,
+            scope: scope,
+            info: {
+                username: username
             }
         });
     }
@@ -244,11 +243,7 @@ export class OAuth2Middleware {
     }
 
     private validateCredentials(clientId: string, username: string, password: string): Promise<Boolean> {
-        if (username == 'demousername' && password == 'demopassword') {
-            return Promise.resolve(true);
-        } else {
-            return Promise.resolve(false);
-        }
+        return this.validateCredentialsFn(clientId, username, password);
     }
 
     private findAuthorizeInformationById(id: string): Promise<any> {

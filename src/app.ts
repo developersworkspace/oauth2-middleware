@@ -4,9 +4,18 @@ import bodyParser = require('body-parser');
 
 import { OAuth2Middleware } from './router';
 
+import { Repository, IRepository } from './repository';
+
+import { MockRepository } from './mock-repository';
+
 export class WebApi {
 
-    constructor(private app: express.Express, private port: number) {
+    constructor(private app: express.Express, private port: number, private repository: IRepository, private validateCredentialsFn: Function) {
+
+        if (this.repository == null) {
+            this.repository = new Repository('mongodb://localhost/oauth2_middleware');
+        }
+
         this.configureMiddleware(app);
         this.configureRoutes(app);
     }
@@ -17,7 +26,7 @@ export class WebApi {
     }
 
     private configureRoutes(app: express.Express) {
-        app.use("/auth", new OAuth2Middleware(new TestFn()).router);
+        app.use("/auth", new OAuth2Middleware(this.validateCredentialsFn, this.repository).router);
     }
 
     public getApp() {
@@ -29,9 +38,7 @@ export class WebApi {
     }
 }
 
-class TestFn {
 
-}
 
 // import * as mongo from 'mongodb';
 // import { Db } from 'mongodb';
@@ -55,6 +62,16 @@ class TestFn {
 //     return true;
 // });
 
-let port = 3000;
-let api = new WebApi(express(), port);
-api.run();
+function validateCredentialsFn(clientId, username: string, password: string): Promise<Boolean> {
+    if (username == 'demousername' && password == 'demopassword') {
+        return Promise.resolve(true);
+    } else {
+        return Promise.resolve(false);
+    }
+}
+
+if (require.main === module) {
+    let port = 3000;
+    let api = new WebApi(express(), port, new MockRepository(), validateCredentialsFn);
+    api.run();
+}

@@ -2,14 +2,12 @@
 import * as mongo from 'mongodb';
 import { Db } from 'mongodb';
 
-export class Repository {
+export class Repository implements IRepository {
 
     private mongoClient: mongo.MongoClient;
-    private uri: string;
-
-    constructor() {
+    
+    constructor(private uri: string) {
         this.mongoClient = mongo.MongoClient;
-        this.uri = 'mongodb://localhost/oauth2_middleware';
     }
 
     public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean> {
@@ -79,4 +77,13 @@ export class Repository {
         });
     }
 
+}
+
+export interface IRepository {
+    
+    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean>;
+    findAuthorizeInformationById(id: string): Promise<any>;
+    findClientByClientId(clientId: string): Promise<any>;
+    saveToken(id: string, token: string, clientId: string, username: string): Promise<Boolean>;
+    findTokenByToken(token: string): Promise<any>;
 }

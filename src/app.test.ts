@@ -5,9 +5,7 @@ import express = require("express");
 
 import { WebApi } from './app';
 
-import { Repository } from './repository';
-
-let api = new WebApi(express(), 8000);
+import { MockRepository } from './mock-repository';
 
 let validClientId = '1234567890';
 let invalidClientId = 'fakeclientid';
@@ -37,6 +35,17 @@ let invalidToken = 'faketoken';
 
 let validGrantType = 'authorization_code';
 let invalidGrantType = 'fakegranttype';
+
+
+function validateCredentialsFn(clientId, username: string, password: string): Promise<Boolean> {
+    if (username == 'demousername' && password == 'demopassword') {
+        return Promise.resolve(true);
+    } else {
+        return Promise.resolve(false);
+    }
+}
+let repository = new MockRepository();
+let api = new WebApi(express(), 8000, repository, validateCredentialsFn);
 
 describe('GET /auth/authorize', () => {
   it('should respond with status code 400 given no query parameters', (done) => {
@@ -77,8 +86,6 @@ describe('GET /auth/login', () => {
 
   beforeEach((done: Function) => {
 
-    let repository = new Repository();
-
     let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope);
 
     Promise.all([
@@ -110,8 +117,6 @@ describe('GET /auth/login', () => {
 describe('POST /auth/login', () => {
 
   beforeEach((done: Function) => {
-
-    let repository = new Repository();
 
     let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope);
     let p2 = repository.saveToken(validId, validToken, validClientId, validUsername);

@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "gulp compile:ts.dev & mocha --timeout=5000 ./src/**/*_test.js & gulp clean:js",
-    "cover": "gulp compile:ts.dev & istanbul cover node_modules/mocha/bin/_mocha --root ./src ./src/**/*_test.js & gulp clean:js"
+    "start": "gulp compile:ts.dev & node ./src/app.js",
+    "test": "gulp compile:ts.dev & mocha --timeout=5000 ./src/**/*.test.js & gulp clean:js",
+    "cover": "gulp compile:ts.dev & istanbul cover node_modules/mocha/bin/_mocha --root ./src ./src/**/*.test.js & gulp clean:js"
   },
   "repository": {
     "type": "git",
