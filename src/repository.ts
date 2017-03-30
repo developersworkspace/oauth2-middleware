@@ -50,7 +50,18 @@ export class Repository implements IRepository {
             let collection = db.collection('clients');
             return collection.findOne({
                 clientId: clientId
-            })
+            });
+        }).then((result: any) => {
+            if (result) {
+                return null;
+            }
+
+            return {
+                name: result.name,
+                clientId: result.clientId,
+                clientSecret: result.clientSecret,
+                redirectUris: result.redirectUris
+            };
         });
     }
 
@@ -89,7 +100,18 @@ export class Repository implements IRepository {
             let collection = db.collection('codes');
             return collection.findOne({
                 code: code
-            })
+            });
+        }).then((result: any) => {
+            if (result) {
+                return null;
+            }
+
+            return {
+                id: result.id,
+                code: code,
+                clientId: result.clientId,
+                username: result.username
+            };
         });
     }
 
