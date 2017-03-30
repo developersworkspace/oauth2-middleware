@@ -1,10 +1,13 @@
+// Imports
 import 'mocha';
 import { expect } from 'chai';
 import * as request from 'supertest';
 import express = require("express");
 
+// Imports app
 import { WebApi } from './app';
 
+// Imports repositories
 import { MockRepository } from './mock-repository';
 
 let validClientId = '1234567890';

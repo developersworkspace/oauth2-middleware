@@ -1,11 +1,13 @@
 // Imports
 import express = require("express");
+
+
+// Imports middleware
+import { OAuth2Middleware } from './index';
 import bodyParser = require('body-parser');
 
-import { OAuth2Middleware } from './router';
-
+// Imports repositories
 import { Repository, IRepository } from './repository';
-
 import { MockRepository } from './mock-repository';
 
 export class WebApi {
