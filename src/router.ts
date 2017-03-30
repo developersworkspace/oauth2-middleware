@@ -12,7 +12,7 @@ export class OAuth2Middleware {
 
     router: Router;
 
-    constructor(private validateCredentialsFn: Function, private repository: IRepository) {
+    constructor(private validateCredentialsFn: Function, private repository: IRepository, private idExpiryMiliseconds, private codeExpiryMiliseconds, private accessTokenExpiryMiliseconds) {
 
         this.router = express.Router();
 
@@ -35,6 +35,11 @@ export class OAuth2Middleware {
             if (result == null) {
                 return null;
             }
+
+            if (result.expiryTimestamp < new Date().getTime()) {
+                return null;
+            }
+
             return this.findNameByClientId(result.clientId);
         }).then((result: string) => {
 
@@ -66,8 +71,12 @@ export class OAuth2Middleware {
                 return null;
             }
 
-            authorizeInformation = result;
+            if (result.expiryTimestamp < new Date().getTime()) {
+                return null;
+            }
 
+            authorizeInformation = result;
+            
             return this.findNameByClientId(result.clientId);
         }).then((result: any) => {
             if (result == null) {
@@ -219,7 +228,7 @@ export class OAuth2Middleware {
 
     private generateCode(id: string, clientId: string, username: string): Promise<string> {
         let code = uuid.v4();
-        return this.repository.saveCode(id, code, clientId, username).then((result: Boolean) => {
+        return this.repository.saveCode(id, code, clientId, username, 2000).then((result: Boolean) => {
             return code;
         });
     }
@@ -227,7 +236,7 @@ export class OAuth2Middleware {
     private generateAccessTokenObject(code: string, clientId: string, username: string, scope: string): Promise<any> {
 
         let accessToken = uuid.v4();
-        let expiresIn = 1800000;
+        let expiresIn = this.accessTokenExpiryMiliseconds;
         let expiryTimestamp = new Date().getTime() + expiresIn;
 
         return this.repository.saveAccessToken(code, accessToken, expiryTimestamp, scope, username).then((result: Boolean) => {
@@ -281,7 +290,8 @@ export class OAuth2Middleware {
     }
 
     private saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean> {
-        return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
+        let expiryTimestamp = new Date().getTime() + this.idExpiryMiliseconds;
+        return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state, expiryTimestamp);
     }
 
     private isEmptyOrSpace(str) {

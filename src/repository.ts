@@ -10,7 +10,7 @@ export class Repository implements IRepository {
         this.mongoClient = mongo.MongoClient;
     }
 
-    public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean> {
+    public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string, expiryTimestamp: number): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
             let collection = db.collection('authorize_infomation');
             return collection.insert({
@@ -18,7 +18,8 @@ export class Repository implements IRepository {
                 responseType: responseType,
                 clientId: clientId,
                 redirectUri: redirectUri,
-                state: state
+                state: state,
+                expiryTimestamp: expiryTimestamp
             });
         }).then((result: any) => {
             return true;
@@ -65,14 +66,15 @@ export class Repository implements IRepository {
         });
     }
 
-    public saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean> {
+    public saveCode(id: string, code: string, clientId: string, username: string, expiryTimestamp: number): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
             let collection = db.collection('codes');
             return collection.insert({
                 id: id,
                 code: code,
                 clientId: clientId,
-                username: username
+                username: username,
+                expiryTimestamp: expiryTimestamp
             });
         }).then((result: any) => {
             return true;
@@ -119,10 +121,10 @@ export class Repository implements IRepository {
 
 export interface IRepository {
 
-    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean>;
+    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string, expiryTimestamp: number): Promise<Boolean>;
     findAuthorizeInformationById(id: string): Promise<any>;
     findClientByClientId(clientId: string): Promise<any>;
-    saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean>;
+    saveCode(id: string, code: string, clientId: string, username: string, expiryTimestamp: number): Promise<Boolean>;
     findCodeByCode(code: string): Promise<any>;
     saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean>;
 }

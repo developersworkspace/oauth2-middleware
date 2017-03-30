@@ -12,7 +12,7 @@ import { MockRepository } from './mock-repository';
 
 export class WebApi {
 
-    constructor(private app: express.Express, private port: number, private repository: IRepository, private validateCredentialsFn: Function) {
+    constructor(private app: express.Express, private port: number, private repository: IRepository, private validateCredentialsFn: Function, private idExpiryMiliseconds, private codeExpiryMiliseconds, private accessTokenExpiryMiliseconds) {
 
         if (this.repository == null) {
             this.repository = new Repository('mongodb://localhost/oauth2_middleware');
@@ -28,7 +28,7 @@ export class WebApi {
     }
 
     private configureRoutes(app: express.Express) {
-        app.use("/auth", new OAuth2Middleware(this.validateCredentialsFn, this.repository).router);
+        app.use("/auth", new OAuth2Middleware(this.validateCredentialsFn, this.repository, this.idExpiryMiliseconds, this.codeExpiryMiliseconds, this.accessTokenExpiryMiliseconds).router);
     }
 
     public getApp() {
@@ -74,6 +74,6 @@ function validateCredentialsFn(clientId, username: string, password: string): Pr
 
 if (require.main === module) {
     let port = 3000;
-    let api = new WebApi(express(), port, new MockRepository(), validateCredentialsFn);
+    let api = new WebApi(express(), port, new MockRepository(), validateCredentialsFn, 120000, 30000, 1800000);
     api.run();
 }

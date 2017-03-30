@@ -23,14 +23,15 @@ export class MockRepository implements IRepository {
 
     }
 
-    public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean> {
+    public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string, expiryTimestamp: number): Promise<Boolean> {
 
         this.authorizeInformation.push({
             id: id,
             responseType: responseType,
             clientId: clientId,
             redirectUri: redirectUri,
-            state: state
+            state: state,
+            expiryTimestamp: expiryTimestamp
         });
 
         return Promise.resolve(true);
@@ -48,12 +49,13 @@ export class MockRepository implements IRepository {
         return Promise.resolve(result);
     }
 
-    public saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean> {
+    public saveCode(id: string, code: string, clientId: string, username: string, expiryTimestamp: number): Promise<Boolean> {
         this.codes.push({
             id: id,
             code: code,
             clientId: clientId,
-            username: username
+            username: username,
+            expiryTimestamp: expiryTimestamp
         });
 
         return Promise.resolve(true);
