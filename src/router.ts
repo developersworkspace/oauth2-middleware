@@ -59,13 +59,22 @@ export class OAuth2Middleware {
         let id = req.query.id;
 
         let authorizeInformation = null;
+        let clientName = null;
 
         this.findAuthorizeInformationById(id).then((result: any) => {
+            if (result == null) {
+                return null;
+            }
+
             authorizeInformation = result;
 
-            if (authorizeInformation == null) {
-                return false;
+            return this.findNameByClientId(result.clientId);
+        }).then((result: any) => {
+            if (result == null) {
+                return null;
             }
+
+            clientName = result;
 
             return this.validateCredentials(authorizeInformation.clientId, username, password);
         }).then((result: Boolean) => {
@@ -78,7 +87,7 @@ export class OAuth2Middleware {
             if (result == null) {
                 this.renderPage(res, 'login.html', {
                     id: id,
-                    name: result,
+                    name: clientName,
                     message: 'Invalid username or password'
                 }, 401);
             } else {
