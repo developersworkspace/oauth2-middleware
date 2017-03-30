@@ -10,7 +10,7 @@ var watch = require('gulp-watch');
 gulp.task('compile:ts.dev', function () {
     return gulp
         .src(["./src/**/*.ts"], { base: './src' })
-        .pipe(ts({ module: 'commonjs', target: 'es6', noImplicitAny: false, allowJs: true, allowUnreachableCode: true }))
+        .pipe(ts({ module: 'commonjs', target: 'es6', noImplicitAny: false, allowUnreachableCode: true }))
         .pipe(gulp.dest('./src'));
 });
 
@@ -34,10 +34,10 @@ gulp.task('clean:dist', function () {
 });
 
 
-// Copies 'package.json' file to build directory
-gulp.task('copy:package.json', function () {
+// Copies 'loign.html' file to build directory
+gulp.task('copy:login.html', function () {
     return gulp
-        .src('./package.json')
+        .src('./src/login.html')
         .pipe(gulp.dest('./dist'));
 });
 
@@ -46,14 +46,7 @@ gulp.task('copy:package.json', function () {
 gulp.task('compile:ts.prod', function () {
     return gulp
         .src(["./src/**/*.ts"], { base: './src' })
-        .pipe(ts({ module: 'commonjs', target: 'es6', noImplicitAny: false, allowJs: true, allowUnreachableCode: true }))
-        .pipe(gulp.dest('./dist'));
-});
-
-// Renames config file
-gulp.task('rename:config', function () {
-    return gulp.src('./dist/config.prod.js', { base: process.cwd() })
-        .pipe(rename('config.js'))
+        .pipe(ts({ module: 'commonjs', target: 'es6', declaration: true, noImplicitAny: false, allowUnreachableCode: true }))
         .pipe(gulp.dest('./dist'));
 });
 
@@ -63,7 +56,7 @@ gulp.task('build:dev', function (done) {
 });
 
 gulp.task('build:prod', function (done) {
-    sequence('clean:dist', 'compile:ts.prod', 'copy:package.json', 'rename:config', done);
+    sequence('clean:dist', 'compile:ts.prod', 'copy:login.html', done);
 });
 
 gulp.task('watch', ['build:dev'], function () {

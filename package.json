@@ -1,12 +1,13 @@
 {
   "name": "oauth2-middleware",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.0.2",
+  "description": "OAuth2 Router/Middleware",
+  "main": "./dist/index.js",
   "scripts": {
     "start": "gulp build:dev & node ./src/app.js",
     "test": "gulp build:dev & mocha --timeout=5000 ./src/**/*.test.js & gulp clean:js",
-    "cover": "gulp build:dev & istanbul cover node_modules/mocha/bin/_mocha --root ./src ./src/**/*.test.js & gulp clean:js"
+    "cover": "gulp build:dev & istanbul cover node_modules/mocha/bin/_mocha --root ./src ./src/**/*.test.js & gulp clean:js",
+    "pub": "gulp build:prod & npm publish & gulp clean:dist"
   },
   "repository": {
     "type": "git",
