@@ -2,7 +2,7 @@ export declare class Repository implements IRepository {
     private uri;
     private mongoClient;
     constructor(uri: string);
-    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean>;
+    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean>;
     findAuthorizeInformationById(id: string): Promise<any>;
     findClientByClientId(clientId: string): Promise<any>;
     saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean>;
@@ -10,7 +10,7 @@ export declare class Repository implements IRepository {
     findCodeByCode(code: string): Promise<any>;
 }
 export interface IRepository {
-    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean>;
+    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean>;
     findAuthorizeInformationById(id: string): Promise<any>;
     findClientByClientId(clientId: string): Promise<any>;
     saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean>;

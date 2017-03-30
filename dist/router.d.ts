@@ -19,6 +19,6 @@ export declare class OAuth2Middleware {
     private findAuthorizeInformationById(id);
     private findNameByClientId(clientId);
     private validateClientId(clientId, redirectUri);
-    private saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
+    private saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
     private isEmptyOrSpace(str);
 }

@@ -7,14 +7,15 @@ class Repository {
         this.uri = uri;
         this.mongoClient = mongo.MongoClient;
     }
-    saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope) {
+    saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state) {
         return this.mongoClient.connect(this.uri).then((db) => {
             let collection = db.collection('authorize_infomation');
             return collection.insert({
                 id: id,
                 responseType: responseType,
                 clientId: clientId,
-                redirectUri: redirectUri
+                redirectUri: redirectUri,
+                state: state
             });
         }).then((result) => {
             return true;

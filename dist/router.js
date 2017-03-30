@@ -42,11 +42,18 @@ class OAuth2Middleware {
         let password = req.body.password;
         let id = req.query.id;
         let authorizeInformation = null;
+        let clientName = null;
         this.findAuthorizeInformationById(id).then((result) => {
-            authorizeInformation = result;
-            if (authorizeInformation == null) {
-                return false;
+            if (result == null) {
+                return null;
             }
+            authorizeInformation = result;
+            return this.findNameByClientId(result.clientId);
+        }).then((result) => {
+            if (result == null) {
+                return null;
+            }
+            clientName = result;
             return this.validateCredentials(authorizeInformation.clientId, username, password);
         }).then((result) => {
             if (result) {
@@ -57,12 +64,12 @@ class OAuth2Middleware {
             if (result == null) {
                 this.renderPage(res, 'login.html', {
                     id: id,
-                    name: result,
+                    name: clientName,
                     message: 'Invalid username or password'
                 }, 401);
             }
             else {
-                res.redirect(`${authorizeInformation.redirectUri}?token=${result}`);
+                res.redirect(`${authorizeInformation.redirectUri}?token=${result}&state=${authorizeInformation.state}`);
             }
         });
     }
@@ -72,6 +79,7 @@ class OAuth2Middleware {
         let clientId = req.query.client_id;
         let redirectUri = req.query.redirect_uri;
         let scope = req.query.scope;
+        let state = req.query.state;
         if (this.isEmptyOrSpace(responseType) || this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(redirectUri) || this.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
             return;
@@ -84,7 +92,7 @@ class OAuth2Middleware {
             if (!result) {
                 return false;
             }
-            return this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
+            return this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
         }).then((result) => {
             if (result) {
                 res.redirect(`login?id=${id}`);
@@ -216,8 +224,8 @@ class OAuth2Middleware {
             return true;
         });
     }
-    saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope) {
-        return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
+    saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state) {
+        return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
     }
     isEmptyOrSpace(str) {
         return str == undefined || str === null || str.match(/^ *$/) !== null;
@@ -227,3 +235,4 @@ exports.OAuth2Middleware = OAuth2Middleware;
 // http://localhost:3000/auth/authorize?response_type=code&client_id=1234567890&redirect_uri=http://demo1.local/callback&scope=read
 // http://localhost:3000/auth/token?client_id=CLIENT_ID&client_secret=CLIENT_SECRET&grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=CALLBACK_URL
 // http://localhost:3000/auth/token?client_id=1234567890&client_secret=0987654321&grant_type=authorization_code&code=32efbb19-9451-44d5-8d83-eb9cee0edc77&redirect_uri=http://demo2.local/callback
+// http://localhost:3000/auth/authorize?response_type=code&client_id=8d851ff6-9571-4a29-acaf-5d1ec8979cb5&redirect_uri=http://localhost:3000/callback&scope=read&state=40335 

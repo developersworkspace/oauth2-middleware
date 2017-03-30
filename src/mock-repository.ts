@@ -23,13 +23,14 @@ export class MockRepository implements IRepository {
 
     }
 
-    public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean> {
+    public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean> {
 
         this.authorizeInformation.push({
             id: id,
             responseType: responseType,
             clientId: clientId,
-            redirectUri: redirectUri
+            redirectUri: redirectUri,
+            state: state
         });
 
         return Promise.resolve(true);

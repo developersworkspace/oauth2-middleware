@@ -1,6 +1,6 @@
 {
   "name": "oauth2-middleware",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "description": "OAuth2 Router/Middleware",
   "main": "./dist/index.js",
   "scripts": {

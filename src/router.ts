@@ -91,7 +91,7 @@ export class OAuth2Middleware {
                     message: 'Invalid username or password'
                 }, 401);
             } else {
-                res.redirect(`${authorizeInformation.redirectUri}?token=${result}`);
+                res.redirect(`${authorizeInformation.redirectUri}?token=${result}&state=${authorizeInformation.state}`);
             }
         });
     }
@@ -102,6 +102,7 @@ export class OAuth2Middleware {
         let clientId = req.query.client_id;
         let redirectUri = req.query.redirect_uri;
         let scope = req.query.scope;
+        let state = req.query.state;
 
         if (this.isEmptyOrSpace(responseType) || this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(redirectUri) || this.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
@@ -117,7 +118,7 @@ export class OAuth2Middleware {
             if (!result) {
                 return false;
             }
-            return this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
+            return this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
         }).then((result: Boolean) => {
             if (result) {
                 res.redirect(`login?id=${id}`);
@@ -279,8 +280,8 @@ export class OAuth2Middleware {
         });
     }
 
-    private saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean> {
-        return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope);
+    private saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean> {
+        return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
     }
 
     private isEmptyOrSpace(str) {
@@ -296,3 +297,6 @@ export class OAuth2Middleware {
 
 // http://localhost:3000/auth/token?client_id=1234567890&client_secret=0987654321&grant_type=authorization_code&code=32efbb19-9451-44d5-8d83-eb9cee0edc77&redirect_uri=http://demo2.local/callback
 
+
+
+// http://localhost:3000/auth/authorize?response_type=code&client_id=8d851ff6-9571-4a29-acaf-5d1ec8979cb5&redirect_uri=http://localhost:3000/callback&scope=read&state=40335

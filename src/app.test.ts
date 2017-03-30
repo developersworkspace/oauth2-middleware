@@ -89,7 +89,7 @@ describe('GET /auth/login', () => {
 
   beforeEach((done: Function) => {
 
-    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope);
+    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null);
 
     Promise.all([
       p1
@@ -121,7 +121,7 @@ describe('POST /auth/login', () => {
 
   beforeEach((done: Function) => {
 
-    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope);
+    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null);
     let p2 = repository.saveCode(validId, validCode, validClientId, validUsername);
 
     Promise.all([
@@ -178,7 +178,7 @@ describe('GET /auth/token', () => {
 
   beforeEach((done: Function) => {
 
-    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope);
+    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null);
     let p2 = repository.saveCode(validId, validCode, validClientId, validUsername);
 
     Promise.all([

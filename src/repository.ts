@@ -10,14 +10,15 @@ export class Repository implements IRepository {
         this.mongoClient = mongo.MongoClient;
     }
 
-    public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean> {
+    public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
             let collection = db.collection('authorize_infomation');
             return collection.insert({
                 id: id,
                 responseType: responseType,
                 clientId: clientId,
-                redirectUri: redirectUri
+                redirectUri: redirectUri,
+                state: state
             });
         }).then((result: any) => {
             return true;
@@ -96,7 +97,7 @@ export class Repository implements IRepository {
 
 export interface IRepository {
 
-    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean>;
+    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean>;
     findAuthorizeInformationById(id: string): Promise<any>;
     findClientByClientId(clientId: string): Promise<any>;
     saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean>;

@@ -4,7 +4,7 @@ export declare class MockRepository implements IRepository {
     private clients;
     private codes;
     constructor();
-    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean>;
+    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean>;
     findAuthorizeInformationById(id: string): Promise<any>;
     findClientByClientId(clientId: string): Promise<any>;
     saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean>;

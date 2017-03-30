@@ -16,12 +16,13 @@ class MockRepository {
         ];
         this.codes = [];
     }
-    saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope) {
+    saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state) {
         this.authorizeInformation.push({
             id: id,
             responseType: responseType,
             clientId: clientId,
-            redirectUri: redirectUri
+            redirectUri: redirectUri,
+            state: state
         });
         return Promise.resolve(true);
     }
