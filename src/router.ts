@@ -70,7 +70,7 @@ export class OAuth2Middleware {
             return this.validateCredentials(authorizeInformation.clientId, username, password);
         }).then((result: Boolean) => {
             if (result) {
-                return this.generateToken(id, authorizeInformation.clientId, username);
+                return this.generateCode(id, authorizeInformation.clientId, username);
             }
 
             return null;
@@ -134,9 +134,9 @@ export class OAuth2Middleware {
             return;
         }
 
-        this.validateToken(clientId, clientSecret, code, redirectUri).then((result: Boolean) => {
+        this.validateCode(clientId, clientSecret, code, redirectUri).then((result: Boolean) => {
             if (result) {
-                return this.findUsernameByToken(code);
+                return this.findUsernameByCode(code);
             }
 
             return null;
@@ -173,8 +173,8 @@ export class OAuth2Middleware {
         });
     }
 
-    private validateToken(clientId: string, clientSecret: string, token: string, redirectUri: string): Promise<Boolean> {
-        return this.repository.findTokenByToken(token).then((result: any) => {
+    private validateCode(clientId: string, clientSecret: string, code: string, redirectUri: string): Promise<Boolean> {
+        return this.repository.findCodeByCode(code).then((result: any) => {
             if (result == null) {
                 return null;
             }
@@ -207,10 +207,10 @@ export class OAuth2Middleware {
         })
     }
 
-    private generateToken(id: string, clientId: string, username: string): Promise<string> {
-        let token = uuid.v4();
-        return this.repository.saveToken(id, token, clientId, username).then((result: Boolean) => {
-            return token;
+    private generateCode(id: string, clientId: string, username: string): Promise<string> {
+        let code = uuid.v4();
+        return this.repository.saveCode(id, code, clientId, username).then((result: Boolean) => {
+            return code;
         });
     }
 
@@ -230,8 +230,8 @@ export class OAuth2Middleware {
         });
     }
 
-    private findUsernameByToken(token: string): Promise<string> {
-        return this.repository.findTokenByToken(token).then((result: any) => {
+    private findUsernameByCode(code: string): Promise<string> {
+        return this.repository.findCodeByCode(code).then((result: any) => {
             if (result == null) {
                 return null;
             }

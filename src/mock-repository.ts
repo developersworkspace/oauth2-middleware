@@ -1,3 +1,6 @@
+// Imports repositories
+import { IRepository } from './repository';
+
 export class MockRepository implements IRepository {
 
     private authorizeInformation = [];
@@ -44,7 +47,7 @@ export class MockRepository implements IRepository {
         return Promise.resolve(result);
     }
 
-    public saveToken(id: string, token: string, clientId: string, username: string): Promise<Boolean> {
+    public saveCode(id: string, token: string, clientId: string, username: string): Promise<Boolean> {
         this.tokens.push({
             id: id,
             token: token,
@@ -56,19 +59,10 @@ export class MockRepository implements IRepository {
     }
 
 
-    public findTokenByToken(token: string): Promise<any> {
+    public findCodeByCode(token: string): Promise<any> {
         let result = this.tokens.find(x => x.token == token);
 
         return Promise.resolve(result);
     }
 
-}
-
-export interface IRepository {
-
-    saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean>;
-    findAuthorizeInformationById(id: string): Promise<any>;
-    findClientByClientId(clientId: string): Promise<any>;
-    saveToken(id: string, token: string, clientId: string, username: string): Promise<Boolean>;
-    findTokenByToken(token: string): Promise<any>;
 }

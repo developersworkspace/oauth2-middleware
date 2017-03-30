@@ -53,12 +53,12 @@ export class Repository implements IRepository {
         });
     }
 
-    public saveToken(id: string, token: string, clientId: string, username: string): Promise<Boolean> {
+    public saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
             let collection = db.collection('tokens');
             return collection.insert({
                 id: id,
-                token: token,
+                code: code,
                 clientId: clientId,
                 username: username
             });
@@ -67,12 +67,16 @@ export class Repository implements IRepository {
         });
     }
 
+    public saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean> {
+        return Promise.resolve(true);
+    }
 
-    public findTokenByToken(token: string): Promise<any> {
+
+    public findCodeByCode(code: string): Promise<any> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('tokens');
+            let collection = db.collection('codes');
             return collection.findOne({
-                token: token
+                code: code
             })
         });
     }
@@ -84,6 +88,6 @@ export interface IRepository {
     saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean>;
     findAuthorizeInformationById(id: string): Promise<any>;
     findClientByClientId(clientId: string): Promise<any>;
-    saveToken(id: string, token: string, clientId: string, username: string): Promise<Boolean>;
-    findTokenByToken(token: string): Promise<any>;
+    saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean>;
+    findCodeByCode(code: string): Promise<any>;
 }
