@@ -96,13 +96,11 @@ export class OAuth2Middleware {
 
         if (this.isEmptyOrSpace(responseType) || this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(redirectUri) || this.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
-            console.log('A');
             return;
         }
 
         if (responseType != 'code') {
             res.status(400).send('Invalid response_type provided');
-            console.log('B');
             return;
         }
 
