@@ -17,7 +17,7 @@ export class MockRepository implements IRepository {
         }
     ];
 
-    private tokens = [];
+    private codes = [];
 
     constructor() {
 
@@ -37,20 +37,20 @@ export class MockRepository implements IRepository {
 
     public findAuthorizeInformationById(id: string): Promise<any> {
         let result = this.authorizeInformation.find(x => x.id == id);
-        
+
         return Promise.resolve(result);
     }
 
     public findClientByClientId(clientId: string): Promise<any> {
         let result = this.clients.find(x => x.clientId == clientId);
-        
+
         return Promise.resolve(result);
     }
 
-    public saveCode(id: string, token: string, clientId: string, username: string): Promise<Boolean> {
-        this.tokens.push({
+    public saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean> {
+        this.codes.push({
             id: id,
-            token: token,
+            code: code,
             clientId: clientId,
             username: username
         });
@@ -59,8 +59,12 @@ export class MockRepository implements IRepository {
     }
 
 
-    public findCodeByCode(token: string): Promise<any> {
-        let result = this.tokens.find(x => x.token == token);
+    public saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean> {
+        return Promise.resolve(true);
+    }
+
+    public findCodeByCode(code: string): Promise<any> {
+        let result = this.codes.find(x => x.code == code);
 
         return Promise.resolve(result);
     }

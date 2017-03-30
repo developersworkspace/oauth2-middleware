@@ -33,19 +33,19 @@ let invalidPassword = 'fakepassword';
 let validResponseType = 'code';
 let invalidResponseType = 'fakeresponsetype';
 
-let validToken = '9ec40cd1-2750-41aa-b9ca-39dd8da9835d';
-let invalidToken = 'faketoken';
+let validCode = '9ec40cd1-2750-41aa-b9ca-39dd8da9835d';
+let invalidCode = 'fakecode';
 
 let validGrantType = 'authorization_code';
 let invalidGrantType = 'fakegranttype';
 
 
 function validateCredentialsFn(clientId, username: string, password: string): Promise<Boolean> {
-    if (username == 'demousername' && password == 'demopassword') {
-        return Promise.resolve(true);
-    } else {
-        return Promise.resolve(false);
-    }
+  if (username == 'demousername' && password == 'demopassword') {
+    return Promise.resolve(true);
+  } else {
+    return Promise.resolve(false);
+  }
 }
 let repository = new MockRepository();
 let api = new WebApi(express(), 8000, repository, validateCredentialsFn);
@@ -122,7 +122,7 @@ describe('POST /auth/login', () => {
   beforeEach((done: Function) => {
 
     let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope);
-    let p2 = repository.saveToken(validId, validToken, validClientId, validUsername);
+    let p2 = repository.saveCode(validId, validCode, validClientId, validUsername);
 
     Promise.all([
       p1,
@@ -175,6 +175,20 @@ describe('POST /auth/login', () => {
 });
 
 describe('GET /auth/token', () => {
+
+  beforeEach((done: Function) => {
+
+    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope);
+    let p2 = repository.saveCode(validId, validCode, validClientId, validUsername);
+
+    Promise.all([
+      p1,
+      p2
+    ]).then((result) => {
+      done();
+    });
+  });
+
   it('should respond with status code 400 given no query parameters', (done) => {
     request(api.getApp())
       .get('/auth/token')
@@ -183,37 +197,37 @@ describe('GET /auth/token', () => {
 
   it('should respond with status code 400 given invalid grant type', (done) => {
     request(api.getApp())
-      .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${invalidGrantType}&code=${validToken}&redirect_uri=${validRedirectUri}`)
+      .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${invalidGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
       .expect(400, done);
   });
 
   it('should respond with status code 401 given invalid client id', (done) => {
     request(api.getApp())
-      .get(`/auth/token?client_id=${invalidClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validToken}&redirect_uri=${validRedirectUri}`)
+      .get(`/auth/token?client_id=${invalidClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
       .expect(401, done);
   });
 
   it('should respond with status code 401 given invalid client secret', (done) => {
     request(api.getApp())
-      .get(`/auth/token?client_id=${validClientId}&client_secret=${invalidClientSecret}&grant_type=${validGrantType}&code=${validToken}&redirect_uri=${validRedirectUri}`)
+      .get(`/auth/token?client_id=${validClientId}&client_secret=${invalidClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
       .expect(401, done);
   });
 
   it('should respond with status code 401 given invalid redirect uri', (done) => {
     request(api.getApp())
-      .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validToken}&redirect_uri=${invalidRedirectUri}`)
+      .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${invalidRedirectUri}`)
       .expect(401, done);
   });
 
   it('should respond with status code 401 given invalid token', (done) => {
     request(api.getApp())
-      .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${invalidToken}&redirect_uri=${validRedirectUri}`)
+      .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${invalidCode}&redirect_uri=${validRedirectUri}`)
       .expect(401, done);
   });
 
   it('should respond with status code 401 given valid parameters', (done) => {
     request(api.getApp())
-      .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validToken}&redirect_uri=${validRedirectUri}`)
+      .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
       .expect(200, done);
   });
 });

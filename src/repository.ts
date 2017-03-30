@@ -5,7 +5,7 @@ import { Db } from 'mongodb';
 export class Repository implements IRepository {
 
     private mongoClient: mongo.MongoClient;
-    
+
     constructor(private uri: string) {
         this.mongoClient = mongo.MongoClient;
     }
@@ -55,7 +55,7 @@ export class Repository implements IRepository {
 
     public saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('tokens');
+            let collection = db.collection('codes');
             return collection.insert({
                 id: id,
                 code: code,
@@ -68,7 +68,18 @@ export class Repository implements IRepository {
     }
 
     public saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean> {
-        return Promise.resolve(true);
+        return this.mongoClient.connect(this.uri).then((db: Db) => {
+            let collection = db.collection('access_tokens');
+            return collection.insert({
+                code: code,
+                accessToken: accessToken,
+                expiryTimestamp: expiryTimestamp,
+                scope: scope,
+                username: username
+            });
+        }).then((result: any) => {
+            return true;
+        });
     }
 
 
@@ -84,10 +95,11 @@ export class Repository implements IRepository {
 }
 
 export interface IRepository {
-    
+
     saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string): Promise<Boolean>;
     findAuthorizeInformationById(id: string): Promise<any>;
     findClientByClientId(clientId: string): Promise<any>;
     saveCode(id: string, code: string, clientId: string, username: string): Promise<Boolean>;
     findCodeByCode(code: string): Promise<any>;
+    saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean>;
 }

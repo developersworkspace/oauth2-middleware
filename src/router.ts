@@ -214,19 +214,22 @@ export class OAuth2Middleware {
         });
     }
 
-    private generateAccessTokenObject(token: string, clientId: string, username: string, scope: string): Promise<any> {
+    private generateAccessTokenObject(code: string, clientId: string, username: string, scope: string): Promise<any> {
 
         let accessToken = uuid.v4();
-        let expiresIn = 2592000;
+        let expiresIn = 1800000;
+        let expiryTimestamp = new Date().getTime() + expiresIn;
 
-        return Promise.resolve({
-            access_token: accessToken,
-            token_type: "bearer",
-            expires_in: expiresIn,
-            scope: scope,
-            info: {
-                username: username
-            }
+        return this.repository.saveAccessToken(code, accessToken, expiryTimestamp, scope, username).then((result: Boolean) => {
+            return Promise.resolve({
+                access_token: accessToken,
+                token_type: "bearer",
+                expires_in: expiresIn,
+                scope: scope,
+                info: {
+                    username: username
+                }
+            });
         });
     }
 
