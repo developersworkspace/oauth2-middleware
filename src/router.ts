@@ -76,7 +76,7 @@ export class OAuth2Middleware {
             }
 
             authorizeInformation = result;
-            
+
             return this.findNameByClientId(result.clientId);
         }).then((result: any) => {
             if (result == null) {
@@ -113,6 +113,12 @@ export class OAuth2Middleware {
         let scope = req.query.scope;
         let state = req.query.state;
 
+        let oauth2_session_id = req.cookies == undefined ? null : (req.cookies.oauth2_session_id == undefined ? null : req.cookies.oauth2_session_id);
+
+        if (oauth2_session_id == null) {
+            oauth2_session_id = uuid.v4();
+        }
+
         if (this.isEmptyOrSpace(responseType) || this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(redirectUri) || this.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
             return;
@@ -123,13 +129,16 @@ export class OAuth2Middleware {
             return;
         }
 
-        this.validateClientId(clientId, redirectUri).then((result: Boolean) => {
-            if (!result) {
-                return false;
-            }
-            return this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
-        }).then((result: Boolean) => {
-            if (result) {
+        Promise.all([
+            this.validateClientId(clientId, redirectUri),
+            this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state)
+        ]).then((results: any[]) => {
+
+            let validateClientIdResult: Boolean = results[0];
+            let saveAuthorizeInformationResult: Boolean = results[1];
+
+            if (validateClientIdResult && saveAuthorizeInformationResult) {
+                res.cookie('oauth2_session_id', id, { maxAge: this.idExpiryMiliseconds, });
                 res.redirect(`login?id=${id}`);
             } else {
                 res.status(401).end();
@@ -197,6 +206,11 @@ export class OAuth2Middleware {
             if (result == null) {
                 return null;
             }
+
+            if (result.expiryTimestamp < new Date().getTime()) {
+                return null;
+            }
+
             return this.findAuthorizeInformationById(result.id);
         }).then((result: any) => {
             if (result == null) {

@@ -219,7 +219,7 @@ describe('GET /auth/token', () => {
     api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
 
     let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
-    let p2 = repository.saveCode(validId, validCode, validClientId, validUsername, 2000);
+    let p2 = repository.saveCode(validId, validCode, validClientId, validUsername, new Date().getTime() + 2000);
 
     Promise.all([
       p1,
@@ -265,7 +265,7 @@ describe('GET /auth/token', () => {
       .expect(401, done);
   });
 
-  it('should respond with status code 401 given valid parameters', (done) => {
+  it('should respond with status code 200 given valid parameters', (done) => {
     request(api.getApp())
       .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
       .expect(200, done);
