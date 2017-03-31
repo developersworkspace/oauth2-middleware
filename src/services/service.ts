@@ -117,8 +117,8 @@ export class Service {
         return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state, expiryTimestamp);
     }
 
-    saveSession(sessionId: string, username: string): Promise<Boolean> {
-        return this.repository.saveSession(sessionId, username);
+    saveSession(sessionId: string, username: string, clientId: string): Promise<Boolean> {
+        return this.repository.saveSession(sessionId, username, clientId);
     }
 
     validateSessionId(sessionId: string): Promise<Boolean> {
@@ -132,14 +132,14 @@ export class Service {
             });
     }
 
-    findUsernameBySessionId(sessionId: string): Promise<string> {
+    findSessionBySessionId(sessionId: string): Promise<string> {
         return this.repository.findSessionBySessionId(sessionId)
             .then((findSessionBySessionIdResult: any) => {
                 if (findSessionBySessionIdResult == null) {
                     return null;
                 }
 
-                return findSessionBySessionIdResult.username;
+                return findSessionBySessionIdResult;
             });
     }
 

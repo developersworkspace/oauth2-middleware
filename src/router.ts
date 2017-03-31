@@ -115,7 +115,7 @@ export class OAuth2Middleware {
             return Promise.all([
                 findAuthorizeInformationByIdResult,
                 generateCodeResult,
-                this.service.saveSession(oauth2_session_id, username)
+                this.service.saveSession(oauth2_session_id, username, findAuthorizeInformationByIdResult.clientId)
             ]);
         }).then((results: any[]) => {
 
@@ -127,7 +127,7 @@ export class OAuth2Middleware {
                 throw new Error('Failed to save session');
             }
 
-            res.cookie('oauth2_session_id', oauth2_session_id, { maxAge: 30000, });
+            res.cookie(`oauth2_session_id_${findAuthorizeInformationByIdResult.clientId}`, oauth2_session_id, { maxAge: 30000, });
             res.redirect(`${findAuthorizeInformationByIdResult.redirectUri}?token=${generateCodeResult}&state=${findAuthorizeInformationByIdResult.state}`);
 
         }).catch((err: Error) => {
@@ -147,7 +147,7 @@ export class OAuth2Middleware {
         let scope = req.query.scope;
         let state = req.query.state;
 
-        let oauth2_session_id = req.cookies == undefined ? null : (req.cookies.oauth2_session_id == undefined ? null : req.cookies.oauth2_session_id);
+        let oauth2_session_id = req.cookies == undefined ? null : (req.cookies[`oauth2_session_id_${clientId}`] == undefined ? null : req.cookies[`oauth2_session_id_${clientId}`]);
 
         if (this.service.isEmptyOrSpace(responseType) || this.service.isEmptyOrSpace(clientId) || this.service.isEmptyOrSpace(redirectUri) || this.service.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
@@ -180,15 +180,19 @@ export class OAuth2Middleware {
             if (!validateSessionIdResult) {
                  return null;
             }else {
-                return this.service.findUsernameBySessionId(oauth2_session_id);
+                return this.service.findSessionBySessionId(oauth2_session_id);
             }
-        }).then((findUsernameBySessionIdResult: string) => {
+        }).then((findSessionBySessionIdResult: any) => {
 
-            if (findUsernameBySessionIdResult == null) {
+            if (findSessionBySessionIdResult == null) {
                 return null;
             }
 
-            return this.service.generateCode(id, clientId, findUsernameBySessionIdResult);
+            if (findSessionBySessionIdResult.clientId != clientId) {
+                return null;
+            }
+
+            return this.service.generateCode(id, clientId, findSessionBySessionIdResult.username);
         }).then((generateCodeResult: string) => {
             if (generateCodeResult == null) {
                 res.redirect(`login?id=${id}`);

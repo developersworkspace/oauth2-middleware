@@ -74,10 +74,11 @@ export class MockRepository implements IRepository {
         return Promise.resolve(result);
     }
 
-    public saveSession(sessionId: string, username: string): Promise<Boolean> {
+    public saveSession(sessionId: string, username: string, clientId: string): Promise<Boolean> {
          this.sessions.push({
             sessionId: sessionId,
             username: username,
+            clientId: clientId
         });
 
         return Promise.resolve(true);

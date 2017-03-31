@@ -40,6 +40,7 @@ let validGrantType = 'authorization_code';
 let invalidGrantType = 'fakegranttype';
 
 let validSessionId = '123';
+let validSessionId2 = '456';
 let invalidSessionId = 'fakesessionid';
 
 
@@ -61,10 +62,12 @@ describe('GET /auth/authorize', () => {
     repository = new MockRepository();
     api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
 
-    let p1 = repository.saveSession(validSessionId, validUsername);
+    let p1 = repository.saveSession(validSessionId, validUsername, validClientId);
+    let p2 = repository.saveSession(validSessionId2, validUsername, invalidClientId);
 
     Promise.all([
-      p1
+      p1,
+      p2
     ]).then((result) => {
       done();
     });
@@ -106,7 +109,7 @@ describe('GET /auth/authorize', () => {
   it('should respond with status code 302 given valid parameters and valid session id', (done) => {
     request(api.getApp())
       .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
-      .set('Cookie', [`oauth2_session_id=${validSessionId}`])
+      .set('Cookie', [`oauth2_session_id_${validClientId}=${validSessionId}`])
       .expect('Location', /.*\?token=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
       .expect(302, done);
   });
@@ -114,7 +117,15 @@ describe('GET /auth/authorize', () => {
   it('should respond with status code 302 given valid parameters and invalid session id', (done) => {
     request(api.getApp())
       .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
-      .set('Cookie', [`oauth2_session_id=${invalidSessionId}`])
+      .set('Cookie', [`oauth2_session_id_${validClientId}=${invalidSessionId}`])
+       .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
+      .expect(302, done);
+  });
+
+  it('should respond with status code 302 given valid parameters but incorrect client id and valid session id', (done) => {
+    request(api.getApp())
+      .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
+      .set('Cookie', [`oauth2_session_id_${validClientId}=${validSessionId2}`])
        .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
       .expect(302, done);
   });
