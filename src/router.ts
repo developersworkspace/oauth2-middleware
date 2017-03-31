@@ -127,7 +127,7 @@ export class OAuth2Middleware {
                 throw new Error('Failed to save session');
             }
 
-            res.cookie(`oauth2_session_id_${findAuthorizeInformationByIdResult.clientId}`, oauth2_session_id, { maxAge: 30000, });
+            res.cookie(`oauth2_session_id_${findAuthorizeInformationByIdResult.clientId}`, oauth2_session_id, { maxAge: 1800, });
             res.redirect(`${findAuthorizeInformationByIdResult.redirectUri}?token=${generateCodeResult}&state=${findAuthorizeInformationByIdResult.state}`);
 
         }).catch((err: Error) => {
