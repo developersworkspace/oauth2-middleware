@@ -7,7 +7,7 @@ class Repository {
         this.uri = uri;
         this.mongoClient = mongo.MongoClient;
     }
-    saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state) {
+    saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state, expiryTimestamp) {
         return this.mongoClient.connect(this.uri).then((db) => {
             let collection = db.collection('authorize_infomation');
             return collection.insert({
@@ -15,7 +15,8 @@ class Repository {
                 responseType: responseType,
                 clientId: clientId,
                 redirectUri: redirectUri,
-                state: state
+                state: state,
+                expiryTimestamp: expiryTimestamp
             });
         }).then((result) => {
             return true;
@@ -45,16 +46,27 @@ class Repository {
             return collection.findOne({
                 clientId: clientId
             });
+        }).then((result) => {
+            if (result) {
+                return null;
+            }
+            return {
+                name: result.name,
+                clientId: result.clientId,
+                clientSecret: result.clientSecret,
+                redirectUris: result.redirectUris
+            };
         });
     }
-    saveCode(id, code, clientId, username) {
+    saveCode(id, code, clientId, username, expiryTimestamp) {
         return this.mongoClient.connect(this.uri).then((db) => {
             let collection = db.collection('codes');
             return collection.insert({
                 id: id,
                 code: code,
                 clientId: clientId,
-                username: username
+                username: username,
+                expiryTimestamp: expiryTimestamp
             });
         }).then((result) => {
             return true;
@@ -80,6 +92,45 @@ class Repository {
             return collection.findOne({
                 code: code
             });
+        }).then((result) => {
+            if (result) {
+                return null;
+            }
+            return {
+                id: result.id,
+                code: code,
+                clientId: result.clientId,
+                username: result.username
+            };
+        });
+    }
+    saveSession(sessionId, username, clientId) {
+        return this.mongoClient.connect(this.uri).then((db) => {
+            let collection = db.collection('sessions');
+            return collection.insert({
+                sessionId: sessionId,
+                username: username,
+                clientId: clientId
+            });
+        }).then((result) => {
+            return true;
+        });
+    }
+    findSessionBySessionId(sessionId) {
+        return this.mongoClient.connect(this.uri).then((db) => {
+            let collection = db.collection('sessions');
+            return collection.findOne({
+                sessionId: sessionId
+            });
+        }).then((result) => {
+            if (result) {
+                return null;
+            }
+            return {
+                sessionId: result.sessionId,
+                username: result.username,
+                clientId: result.clientId
+            };
         });
     }
 }

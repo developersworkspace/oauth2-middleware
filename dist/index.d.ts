@@ -1,3 +1,3 @@
 export { OAuth2Middleware } from './router';
-export { Repository, IRepository } from './repository';
-export { MockRepository } from './mock-repository';
+export { Repository, IRepository } from './repositories/repository';
+export { MockRepository } from './repositories/mock-repository';

@@ -7,7 +7,7 @@ const express = require("express");
 // Imports app
 const app_1 = require("./app");
 // Imports repositories
-const mock_repository_1 = require("./mock-repository");
+const mock_repository_1 = require("./repositories/mock-repository");
 let validClientId = '1234567890';
 let invalidClientId = 'fakeclientid';
 let validClientSecret = '0987654321';
@@ -27,6 +27,9 @@ let validCode = '9ec40cd1-2750-41aa-b9ca-39dd8da9835d';
 let invalidCode = 'fakecode';
 let validGrantType = 'authorization_code';
 let invalidGrantType = 'fakegranttype';
+let validSessionId = '123';
+let validSessionId2 = '456';
+let invalidSessionId = 'fakesessionid';
 function validateCredentialsFn(clientId, username, password) {
     if (username == 'demousername' && password == 'demopassword') {
         return Promise.resolve(true);
@@ -35,9 +38,21 @@ function validateCredentialsFn(clientId, username, password) {
         return Promise.resolve(false);
     }
 }
-let repository = new mock_repository_1.MockRepository();
-let api = new app_1.WebApi(express(), 8000, repository, validateCredentialsFn);
+let repository;
+let api;
 describe('GET /auth/authorize', () => {
+    beforeEach((done) => {
+        repository = new mock_repository_1.MockRepository();
+        api = new app_1.WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
+        let p1 = repository.saveSession(validSessionId, validUsername, validClientId);
+        let p2 = repository.saveSession(validSessionId2, validUsername, invalidClientId);
+        Promise.all([
+            p1,
+            p2
+        ]).then((result) => {
+            done();
+        });
+    });
     it('should respond with status code 400 given no query parameters', (done) => {
         request(api.getApp())
             .get('/auth/authorize')
@@ -48,15 +63,15 @@ describe('GET /auth/authorize', () => {
             .get(`/auth/authorize?response_type=${invalidResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
             .expect(400, done);
     });
-    it('should respond with status code 401 given invalid client id', (done) => {
+    it('should respond with status code 400 given invalid client id', (done) => {
         request(api.getApp())
             .get(`/auth/authorize?response_type=${validResponseType}&client_id=${invalidClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
-            .expect(401, done);
+            .expect(400, done);
     });
-    it('should respond with status code 401 given invalid redirect uri', (done) => {
+    it('should respond with status code 400 given invalid redirect uri', (done) => {
         request(api.getApp())
             .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${invalidRedirectUri}&scope=${validScope}`)
-            .expect(401, done);
+            .expect(400, done);
     });
     it('should respond with status code 302 given valid parameters', (done) => {
         request(api.getApp())
@@ -64,10 +79,33 @@ describe('GET /auth/authorize', () => {
             .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
             .expect(302, done);
     });
+    it('should respond with status code 302 given valid parameters and valid session id', (done) => {
+        request(api.getApp())
+            .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
+            .set('Cookie', [`oauth2_session_id_${validClientId}=${validSessionId}`])
+            .expect('Location', /.*\?token=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
+            .expect(302, done);
+    });
+    it('should respond with status code 302 given valid parameters and invalid session id', (done) => {
+        request(api.getApp())
+            .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
+            .set('Cookie', [`oauth2_session_id_${validClientId}=${invalidSessionId}`])
+            .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
+            .expect(302, done);
+    });
+    it('should respond with status code 302 given valid parameters but incorrect client id and valid session id', (done) => {
+        request(api.getApp())
+            .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
+            .set('Cookie', [`oauth2_session_id_${validClientId}=${validSessionId2}`])
+            .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
+            .expect(302, done);
+    });
 });
 describe('GET /auth/login', () => {
     beforeEach((done) => {
-        let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null);
+        repository = new mock_repository_1.MockRepository();
+        api = new app_1.WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
+        let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
         Promise.all([
             p1
         ]).then((result) => {
@@ -89,11 +127,20 @@ describe('GET /auth/login', () => {
             .get(`/auth/login`)
             .expect(400, done);
     });
+    it('should respond with status code 200 given valid id which expired', (done) => {
+        wait(4000).then((result) => {
+            request(api.getApp())
+                .get(`/auth/login?id=${validId}`)
+                .expect(400, done);
+        });
+    });
 });
 describe('POST /auth/login', () => {
     beforeEach((done) => {
-        let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null);
-        let p2 = repository.saveCode(validId, validCode, validClientId, validUsername);
+        repository = new mock_repository_1.MockRepository();
+        api = new app_1.WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
+        let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
+        let p2 = repository.saveCode(validId, validCode, validClientId, validUsername, 2000);
         Promise.all([
             p1,
             p2
@@ -128,7 +175,7 @@ describe('POST /auth/login', () => {
         })
             .expect(401, done);
     });
-    it('should respond with status code 302 given valid id, invalid username, invalid password', (done) => {
+    it('should respond with status code 302 given valid id, valid username, valid password', (done) => {
         request(api.getApp())
             .post(`/auth/login?id=${validId}`)
             .send({
@@ -138,11 +185,24 @@ describe('POST /auth/login', () => {
             .expect('Location', /.*\?token=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
             .expect(302, done);
     });
+    it('should respond with status code 302 given valid id which expired, valid username, valid password', (done) => {
+        wait(4000).then((result) => {
+            request(api.getApp())
+                .post(`/auth/login?id=${validId}`)
+                .send({
+                username: validUsername,
+                password: validPassword
+            })
+                .expect(401, done);
+        });
+    });
 });
 describe('GET /auth/token', () => {
     beforeEach((done) => {
-        let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null);
-        let p2 = repository.saveCode(validId, validCode, validClientId, validUsername);
+        repository = new mock_repository_1.MockRepository();
+        api = new app_1.WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
+        let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
+        let p2 = repository.saveCode(validId, validCode, validClientId, validUsername, new Date().getTime() + 2000);
         Promise.all([
             p1,
             p2
@@ -180,9 +240,23 @@ describe('GET /auth/token', () => {
             .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${invalidCode}&redirect_uri=${validRedirectUri}`)
             .expect(401, done);
     });
-    it('should respond with status code 401 given valid parameters', (done) => {
+    it('should respond with status code 200 given valid parameters', (done) => {
         request(api.getApp())
             .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
             .expect(200, done);
     });
+    it('should respond with status code 401 given valid code which expired', (done) => {
+        wait(4000).then((result) => {
+            request(api.getApp())
+                .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
+                .expect(401, done);
+        });
+    });
 });
+function wait(miliSeconds) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(() => {
+            resolve();
+        }, miliSeconds);
+    });
+}

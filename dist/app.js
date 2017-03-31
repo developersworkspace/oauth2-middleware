@@ -5,15 +5,19 @@ const express = require("express");
 // Imports middleware
 const index_1 = require("./index");
 const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
 // Imports repositories
-const repository_1 = require("./repository");
-const mock_repository_1 = require("./mock-repository");
+const repository_1 = require("./repositories/repository");
+const mock_repository_1 = require("./repositories/mock-repository");
 class WebApi {
-    constructor(app, port, repository, validateCredentialsFn) {
+    constructor(app, port, repository, validateCredentialsFn, idExpiryMiliseconds, codeExpiryMiliseconds, accessTokenExpiryMiliseconds) {
         this.app = app;
         this.port = port;
         this.repository = repository;
         this.validateCredentialsFn = validateCredentialsFn;
+        this.idExpiryMiliseconds = idExpiryMiliseconds;
+        this.codeExpiryMiliseconds = codeExpiryMiliseconds;
+        this.accessTokenExpiryMiliseconds = accessTokenExpiryMiliseconds;
         if (this.repository == null) {
             this.repository = new repository_1.Repository('mongodb://localhost/oauth2_middleware');
         }
@@ -21,11 +25,12 @@ class WebApi {
         this.configureRoutes(app);
     }
     configureMiddleware(app) {
+        app.use(cookieParser());
         app.use(bodyParser.json());
         app.use(bodyParser.urlencoded({ extended: false }));
     }
     configureRoutes(app) {
-        app.use("/auth", new index_1.OAuth2Middleware(this.validateCredentialsFn, this.repository).router);
+        app.use("/auth", new index_1.OAuth2Middleware(this.validateCredentialsFn, this.repository, this.idExpiryMiliseconds, this.codeExpiryMiliseconds, this.accessTokenExpiryMiliseconds).router);
     }
     getApp() {
         return this.app;
@@ -64,6 +69,6 @@ function validateCredentialsFn(clientId, username, password) {
 }
 if (require.main === module) {
     let port = 3000;
-    let api = new WebApi(express(), port, new mock_repository_1.MockRepository(), validateCredentialsFn);
+    let api = new WebApi(express(), port, new mock_repository_1.MockRepository(), validateCredentialsFn, 120000, 30000, 1800000);
     api.run();
 }
