@@ -183,19 +183,16 @@ class OAuth2Middleware {
             if (validateCodeResult) {
                 return this.service.findUsernameByCode(code);
             }
-            return null;
+            throw new Error('Invalid code provided');
         }).then((findUsernameByCodeResult) => {
-            if (findUsernameByCodeResult == null) {
-                return null;
-            }
             return this.service.generateAccessTokenObject(code, clientId, findUsernameByCodeResult, 'read');
         }).then((generateAccessTokenObjectResult) => {
             if (generateAccessTokenObjectResult == null) {
-                res.status(401).end();
+                throw new Error('Failed to generate access token object');
             }
-            else {
-                res.json(generateAccessTokenObjectResult);
-            }
+            res.json(generateAccessTokenObjectResult);
+        }).catch((err) => {
+            res.status(400).send(err.message);
         });
     }
     renderPage(res, htmlFile, data, status) {

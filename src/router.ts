@@ -178,8 +178,8 @@ export class OAuth2Middleware {
             return this.service.validateSessionId(oauth2_session_id);
         }).then((validateSessionIdResult: Boolean) => {
             if (!validateSessionIdResult) {
-                 return null;
-            }else {
+                return null;
+            } else {
                 return this.service.findSessionBySessionId(oauth2_session_id);
             }
         }).then((findSessionBySessionIdResult: any) => {
@@ -196,13 +196,13 @@ export class OAuth2Middleware {
         }).then((generateCodeResult: string) => {
             if (generateCodeResult == null) {
                 res.redirect(`login?id=${id}`);
-            }else {
+            } else {
                 res.redirect(`${redirectUri}?token=${generateCodeResult}&state=${state}`);
             }
         })
-        .catch((err: Error) => {
-             res.status(400).send(err.message);
-        });
+            .catch((err: Error) => {
+                res.status(400).send(err.message);
+            });
 
 
     }
@@ -228,21 +228,17 @@ export class OAuth2Middleware {
                 return this.service.findUsernameByCode(code);
             }
 
-            return null;
+            throw new Error('Invalid code provided');
         }).then((findUsernameByCodeResult: string) => {
-            if (findUsernameByCodeResult == null) {
-                return null;
-            }
-
             return this.service.generateAccessTokenObject(code, clientId, findUsernameByCodeResult, 'read');
         }).then((generateAccessTokenObjectResult: any) => {
             if (generateAccessTokenObjectResult == null) {
-                res.status(401).end();
-            }
-            else {
-                res.json(generateAccessTokenObjectResult);
+                throw new Error('Failed to generate access token object');
             }
 
+            res.json(generateAccessTokenObjectResult);
+        }).catch((err: Error) => {
+            res.status(400).send(err.message);
         });
     }
 
