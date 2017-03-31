@@ -8,7 +8,7 @@ import express = require("express");
 import { WebApi } from './app';
 
 // Imports repositories
-import { MockRepository } from './mock-repository';
+import { MockRepository } from './repositories/mock-repository';
 
 let validClientId = '1234567890';
 let invalidClientId = 'fakeclientid';

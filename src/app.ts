@@ -7,8 +7,8 @@ import { OAuth2Middleware } from './index';
 import bodyParser = require('body-parser');
 
 // Imports repositories
-import { Repository, IRepository } from './repository';
-import { MockRepository } from './mock-repository';
+import { Repository, IRepository } from './repositories/repository';
+import { MockRepository } from './repositories/mock-repository';
 
 export class WebApi {
 

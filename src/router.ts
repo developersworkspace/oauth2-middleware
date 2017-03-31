@@ -6,13 +6,19 @@ import * as fs from 'graceful-fs';
 import * as Handlebars from 'handlebars';
 
 // Imports repositories
-import { IRepository } from './repository';
+import { IRepository } from './repositories/repository';
+
+// Imports services
+import { Service } from './services/service';
 
 export class OAuth2Middleware {
 
     router: Router;
 
+    private service: Service;
+
     constructor(private validateCredentialsFn: Function, private repository: IRepository, private idExpiryMiliseconds, private codeExpiryMiliseconds, private accessTokenExpiryMiliseconds) {
+        this.service = new Service(validateCredentialsFn, repository, idExpiryMiliseconds, codeExpiryMiliseconds, accessTokenExpiryMiliseconds);
 
         this.router = express.Router();
 
@@ -26,12 +32,12 @@ export class OAuth2Middleware {
 
         let id = req.query.id;
 
-        if (this.isEmptyOrSpace(id)) {
+        if (this.service.isEmptyOrSpace(id)) {
             res.status(400).send('Invalid parameters provided');
             return;
         }
 
-        this.findAuthorizeInformationById(id).then((result: any) => {
+        this.service.findAuthorizeInformationById(id).then((result: any) => {
             if (result == null) {
                 return null;
             }
@@ -40,17 +46,17 @@ export class OAuth2Middleware {
                 return null;
             }
 
-            return this.findNameByClientId(result.clientId);
-        }).then((result: string) => {
+            return this.service.findNameByClientId(result.clientId);
+        }).then((findNameByClientIdResult: string) => {
 
-            if (result == null) {
+            if (findNameByClientIdResult == null) {
                 res.status(400).send('Invalid parameters provided');
                 return;
             }
 
             this.renderPage(res, 'login.html', {
                 id: id,
-                name: result,
+                name: findNameByClientIdResult,
                 message: null
             }, 200);
         });
@@ -63,44 +69,36 @@ export class OAuth2Middleware {
         let password = req.body.password;
         let id = req.query.id;
 
-        let authorizeInformation = null;
-        let clientName = null;
-
-        this.findAuthorizeInformationById(id).then((result: any) => {
-            if (result == null) {
+        this.service.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult: any) => {
+            if (findAuthorizeInformationByIdResult == null) {
                 return null;
             }
 
-            if (result.expiryTimestamp < new Date().getTime()) {
+            if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
                 return null;
             }
 
-            authorizeInformation = result;
+            return Promise.all([
+                findAuthorizeInformationByIdResult,
+                this.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId),
+                this.service.validateCredentials(findAuthorizeInformationByIdResult.clientId, username, password),
+                this.service.generateCode(id, findAuthorizeInformationByIdResult.clientId, username)
+            ]);
+        }).then((results: any[]) => {
+            
+            let findAuthorizeInformationByIdResult: any = results == null? null : results[0];
+            let findNameByClientIdResult: string = results == null? null : results[1];
+            let validateCredentialsResult: Boolean = results == null? null : results[2];
+            let generateCodeResult: string = results == null? null : results[3];
 
-            return this.findNameByClientId(result.clientId);
-        }).then((result: any) => {
-            if (result == null) {
-                return null;
-            }
-
-            clientName = result;
-
-            return this.validateCredentials(authorizeInformation.clientId, username, password);
-        }).then((result: Boolean) => {
-            if (result) {
-                return this.generateCode(id, authorizeInformation.clientId, username);
-            }
-
-            return null;
-        }).then((result: string) => {
-            if (result == null) {
+            if (findAuthorizeInformationByIdResult == null || findNameByClientIdResult == null || !validateCredentialsResult || generateCodeResult == null) {
                 this.renderPage(res, 'login.html', {
                     id: id,
-                    name: clientName,
+                    name: findNameByClientIdResult,
                     message: 'Invalid username or password'
                 }, 401);
             } else {
-                res.redirect(`${authorizeInformation.redirectUri}?token=${result}&state=${authorizeInformation.state}`);
+                res.redirect(`${findAuthorizeInformationByIdResult.redirectUri}?token=${generateCodeResult}&state=${findAuthorizeInformationByIdResult.state}`);
             }
         });
     }
@@ -119,7 +117,7 @@ export class OAuth2Middleware {
             oauth2_session_id = uuid.v4();
         }
 
-        if (this.isEmptyOrSpace(responseType) || this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(redirectUri) || this.isEmptyOrSpace(scope)) {
+        if (this.service.isEmptyOrSpace(responseType) || this.service.isEmptyOrSpace(clientId) || this.service.isEmptyOrSpace(redirectUri) || this.service.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
             return;
         }
@@ -130,8 +128,8 @@ export class OAuth2Middleware {
         }
 
         Promise.all([
-            this.validateClientId(clientId, redirectUri),
-            this.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state)
+            this.service.validateClientId(clientId, redirectUri),
+            this.service.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state)
         ]).then((results: any[]) => {
 
             let validateClientIdResult: Boolean = results[0];
@@ -152,7 +150,7 @@ export class OAuth2Middleware {
         let grantType = req.query.grant_type;
         let code = req.query.code;
         let redirectUri = req.query.redirect_uri;
-        if (this.isEmptyOrSpace(clientId) || this.isEmptyOrSpace(clientSecret) || this.isEmptyOrSpace(grantType) || this.isEmptyOrSpace(code) || this.isEmptyOrSpace(redirectUri)) {
+        if (this.service.isEmptyOrSpace(clientId) || this.service.isEmptyOrSpace(clientSecret) || this.service.isEmptyOrSpace(grantType) || this.service.isEmptyOrSpace(code) || this.service.isEmptyOrSpace(redirectUri)) {
             res.status(400).send('Invalid parameters provided');
             return;
         }
@@ -162,24 +160,24 @@ export class OAuth2Middleware {
             return;
         }
 
-        this.validateCode(clientId, clientSecret, code, redirectUri).then((result: Boolean) => {
-            if (result) {
-                return this.findUsernameByCode(code);
+        this.service.validateCode(clientId, clientSecret, code, redirectUri).then((validateCodeResult: Boolean) => {
+            if (validateCodeResult) {
+                return this.service.findUsernameByCode(code);
             }
 
             return null;
-        }).then((result: string) => {
-            if (result == null) {
+        }).then((findUsernameByCodeResult: string) => {
+            if (findUsernameByCodeResult == null) {
                 return null;
             }
 
-            return this.generateAccessTokenObject(code, clientId, result, 'read');
-        }).then((result: any) => {
-            if (result == null) {
+            return this.service.generateAccessTokenObject(code, clientId, findUsernameByCodeResult, 'read');
+        }).then((generateAccessTokenObjectResult: any) => {
+            if (generateAccessTokenObjectResult == null) {
                 res.status(401).end();
             }
             else {
-                res.json(result);
+                res.json(generateAccessTokenObjectResult);
             }
 
         });
@@ -200,118 +198,6 @@ export class OAuth2Middleware {
 
         });
     }
-
-    private validateCode(clientId: string, clientSecret: string, code: string, redirectUri: string): Promise<Boolean> {
-        return this.repository.findCodeByCode(code).then((result: any) => {
-            if (result == null) {
-                return null;
-            }
-
-            if (result.expiryTimestamp < new Date().getTime()) {
-                return null;
-            }
-
-            return this.findAuthorizeInformationById(result.id);
-        }).then((result: any) => {
-            if (result == null) {
-                return null;
-            }
-
-            if (result.clientId != clientId) {
-                return null;
-            }
-
-            if (result.redirectUri != redirectUri) {
-                return null;
-            }
-
-
-            return this.repository.findClientByClientId(clientId);
-        }).then((result: any) => {
-            if (result == null) {
-                return false;
-            }
-
-            if (result.clientSecret != clientSecret) {
-                return false;
-            }
-
-            return true;
-        })
-    }
-
-    private generateCode(id: string, clientId: string, username: string): Promise<string> {
-        let code = uuid.v4();
-        return this.repository.saveCode(id, code, clientId, username, 2000).then((result: Boolean) => {
-            return code;
-        });
-    }
-
-    private generateAccessTokenObject(code: string, clientId: string, username: string, scope: string): Promise<any> {
-
-        let accessToken = uuid.v4();
-        let expiresIn = this.accessTokenExpiryMiliseconds;
-        let expiryTimestamp = new Date().getTime() + expiresIn;
-
-        return this.repository.saveAccessToken(code, accessToken, expiryTimestamp, scope, username).then((result: Boolean) => {
-            return Promise.resolve({
-                access_token: accessToken,
-                token_type: "bearer",
-                expires_in: expiresIn,
-                scope: scope,
-                info: {
-                    username: username
-                }
-            });
-        });
-    }
-
-    private findUsernameByCode(code: string): Promise<string> {
-        return this.repository.findCodeByCode(code).then((result: any) => {
-            if (result == null) {
-                return null;
-            }
-
-            return result.username;
-        });
-    }
-
-    private validateCredentials(clientId: string, username: string, password: string): Promise<Boolean> {
-        return this.validateCredentialsFn(clientId, username, password);
-    }
-
-    private findAuthorizeInformationById(id: string): Promise<any> {
-        return this.repository.findAuthorizeInformationById(id);
-    }
-
-    private findNameByClientId(clientId: string): Promise<string> {
-        return this.repository.findClientByClientId(clientId).then((result: any) => {
-            return result.name;
-        });
-    }
-
-    private validateClientId(clientId: string, redirectUri: string): Promise<Boolean> {
-        return this.repository.findClientByClientId(clientId).then((result: any) => {
-            if (result == null) {
-                return false;
-            }
-
-            if (result.redirectUris.indexOf(redirectUri) == -1) {
-                return false;
-            }
-            return true;
-        });
-    }
-
-    private saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean> {
-        let expiryTimestamp = new Date().getTime() + this.idExpiryMiliseconds;
-        return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state, expiryTimestamp);
-    }
-
-    private isEmptyOrSpace(str) {
-        return str == undefined || str === null || str.match(/^ *$/) !== null;
-    }
-
 }
 
 // http://localhost:3000/auth/authorize?response_type=code&client_id=1234567890&redirect_uri=http://demo1.local/callback&scope=read
