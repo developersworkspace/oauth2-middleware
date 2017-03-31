@@ -42,7 +42,7 @@ class Service {
     }
     generateCode(id, clientId, username) {
         let code = uuid.v4();
-        return this.repository.saveCode(id, code, clientId, username, 2000).then((result) => {
+        return this.repository.saveCode(id, code, clientId, username, new Date().getTime() + this.codeExpiryMiliseconds).then((result) => {
             return code;
         });
     }
