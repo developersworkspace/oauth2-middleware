@@ -5,6 +5,7 @@ import express = require("express");
 // Imports middleware
 import { OAuth2Middleware } from './index';
 import bodyParser = require('body-parser');
+import cookieParser = require('cookie-parser');
 
 // Imports repositories
 import { Repository, IRepository } from './repositories/repository';
@@ -23,6 +24,7 @@ export class WebApi {
     }
 
     private configureMiddleware(app: express.Express) {
+        app.use(cookieParser())
         app.use(bodyParser.json());
         app.use(bodyParser.urlencoded({ extended: false }));
     }
@@ -77,3 +79,5 @@ if (require.main === module) {
     let api = new WebApi(express(), port, new MockRepository(), validateCredentialsFn, 120000, 30000, 1800000);
     api.run();
 }
+
+

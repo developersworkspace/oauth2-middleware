@@ -37,28 +37,24 @@ export class OAuth2Middleware {
             return;
         }
 
-        this.service.findAuthorizeInformationById(id).then((result: any) => {
-            if (result == null) {
-                return null;
+        this.service.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult: any) => {
+            if (findAuthorizeInformationByIdResult == null) {
+                throw new Error('Invalid id provided');
             }
 
-            if (result.expiryTimestamp < new Date().getTime()) {
-                return null;
+            if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
+                throw new Error('Expired id provided');
             }
 
-            return this.service.findNameByClientId(result.clientId);
+            return this.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
         }).then((findNameByClientIdResult: string) => {
-
-            if (findNameByClientIdResult == null) {
-                res.status(400).send('Invalid parameters provided');
-                return;
-            }
-
             this.renderPage(res, 'login.html', {
                 id: id,
                 name: findNameByClientIdResult,
                 message: null
             }, 200);
+        }).catch((err: Error) => {
+            res.status(400).send(err.message);
         });
 
     }
@@ -69,37 +65,77 @@ export class OAuth2Middleware {
         let password = req.body.password;
         let id = req.query.id;
 
-        this.service.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult: any) => {
+        let oauth2_session_id = uuid.v4();
+
+        let temp_findNameByClientIdResult = null;
+
+        return this.service.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult: any) => {
             if (findAuthorizeInformationByIdResult == null) {
-                return null;
+                throw new Error('Invalid id provided');
             }
 
             if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
-                return null;
+                throw new Error('Expired id provided');
             }
 
             return Promise.all([
                 findAuthorizeInformationByIdResult,
                 this.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId),
-                this.service.validateCredentials(findAuthorizeInformationByIdResult.clientId, username, password),
-                this.service.generateCode(id, findAuthorizeInformationByIdResult.clientId, username)
+                this.service.validateCredentials(findAuthorizeInformationByIdResult.clientId, username, password)
             ]);
         }).then((results: any[]) => {
-            
-            let findAuthorizeInformationByIdResult: any = results == null? null : results[0];
-            let findNameByClientIdResult: string = results == null? null : results[1];
-            let validateCredentialsResult: Boolean = results == null? null : results[2];
-            let generateCodeResult: string = results == null? null : results[3];
 
-            if (findAuthorizeInformationByIdResult == null || findNameByClientIdResult == null || !validateCredentialsResult || generateCodeResult == null) {
-                this.renderPage(res, 'login.html', {
-                    id: id,
-                    name: findNameByClientIdResult,
-                    message: 'Invalid username or password'
-                }, 401);
+            let findAuthorizeInformationByIdResult: any = results == null ? null : results[0];
+            let findNameByClientIdResult: string = results == null ? null : results[1];
+            let validateCredentialsResult: Boolean = results == null ? null : results[2];
+
+            temp_findNameByClientIdResult = findNameByClientIdResult;
+
+            if (findNameByClientIdResult == null) {
+                throw new Error('Invalid client id provided');
+            } else if (!validateCredentialsResult) {
+                throw new Error('Invalid credentials provided');
             } else {
-                res.redirect(`${findAuthorizeInformationByIdResult.redirectUri}?token=${generateCodeResult}&state=${findAuthorizeInformationByIdResult.state}`);
+                return Promise.all([
+                    findAuthorizeInformationByIdResult,
+                    findNameByClientIdResult,
+                    this.service.generateCode(id, findAuthorizeInformationByIdResult.clientId, username)
+                ]);
             }
+        }).then((results: any[]) => {
+
+            let findAuthorizeInformationByIdResult: any = results == null ? null : results[0];
+            let findNameByClientIdResult: string = results == null ? null : results[1];
+            let generateCodeResult: string = results == null ? null : results[2];
+
+            if (generateCodeResult == null) {
+                throw Error('Failed to generate code');
+            }
+
+            return Promise.all([
+                findAuthorizeInformationByIdResult,
+                generateCodeResult,
+                this.service.saveSession(oauth2_session_id, username)
+            ]);
+        }).then((results: any[]) => {
+
+            let findAuthorizeInformationByIdResult: any = results == null ? null : results[0];
+            let generateCodeResult: string = results == null ? null : results[1];
+            let saveSessionResult: Boolean = results == null ? null : results[2];
+
+            if (!saveSessionResult) {
+                throw new Error('Failed to save session');
+            }
+
+            res.cookie('oauth2_session_id', oauth2_session_id, { maxAge: 30000, });
+            res.redirect(`${findAuthorizeInformationByIdResult.redirectUri}?token=${generateCodeResult}&state=${findAuthorizeInformationByIdResult.state}`);
+
+        }).catch((err: Error) => {
+            this.renderPage(res, 'login.html', {
+                id: id,
+                name: temp_findNameByClientIdResult,
+                message: err.message
+            }, 401);
         });
     }
 
@@ -113,10 +149,6 @@ export class OAuth2Middleware {
 
         let oauth2_session_id = req.cookies == undefined ? null : (req.cookies.oauth2_session_id == undefined ? null : req.cookies.oauth2_session_id);
 
-        if (oauth2_session_id == null) {
-            oauth2_session_id = uuid.v4();
-        }
-
         if (this.service.isEmptyOrSpace(responseType) || this.service.isEmptyOrSpace(clientId) || this.service.isEmptyOrSpace(redirectUri) || this.service.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
             return;
@@ -127,21 +159,48 @@ export class OAuth2Middleware {
             return;
         }
 
-        Promise.all([
-            this.service.validateClientId(clientId, redirectUri),
-            this.service.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state)
-        ]).then((results: any[]) => {
-
-            let validateClientIdResult: Boolean = results[0];
-            let saveAuthorizeInformationResult: Boolean = results[1];
-
-            if (validateClientIdResult && saveAuthorizeInformationResult) {
-                res.cookie('oauth2_session_id', id, { maxAge: this.idExpiryMiliseconds, });
-                res.redirect(`login?id=${id}`);
-            } else {
-                res.status(401).end();
+        this.service.validateClientId(clientId, redirectUri).then((validateClientIdResult: Boolean) => {
+            if (!validateClientIdResult) {
+                throw new Error('Invalid client id provided');
             }
+
+            return this.service.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
+        }).then((saveAuthorizeInformationResult: Boolean) => {
+
+            if (!saveAuthorizeInformationResult) {
+                throw new Error('Failed to save authorize information');
+            }
+
+            if (oauth2_session_id == null) {
+                return null;
+            }
+
+            return this.service.validateSessionId(oauth2_session_id);
+        }).then((validateSessionIdResult: Boolean) => {
+            if (!validateSessionIdResult) {
+                 return null;
+            }else {
+                return this.service.findUsernameBySessionId(oauth2_session_id);
+            }
+        }).then((findUsernameBySessionIdResult: string) => {
+
+            if (findUsernameBySessionIdResult == null) {
+                return null;
+            }
+
+            return this.service.generateCode(id, clientId, findUsernameBySessionIdResult);
+        }).then((generateCodeResult: string) => {
+            if (generateCodeResult == null) {
+                res.redirect(`login?id=${id}`);
+            }else {
+                res.redirect(`${redirectUri}?token=${generateCodeResult}&state=${state}`);
+            }
+        })
+        .catch((err: Error) => {
+             res.status(400).send(err.message);
         });
+
+
     }
 
     private token(req: Request, res: Response, next: Function) {

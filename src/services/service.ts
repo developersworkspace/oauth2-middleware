@@ -117,6 +117,32 @@ export class Service {
         return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state, expiryTimestamp);
     }
 
+    saveSession(sessionId: string, username: string): Promise<Boolean> {
+        return this.repository.saveSession(sessionId, username);
+    }
+
+    validateSessionId(sessionId: string): Promise<Boolean> {
+        return this.repository.findSessionBySessionId(sessionId)
+            .then((findSessionBySessionIdResult: any) => {
+                if (findSessionBySessionIdResult == null) {
+                    return false;
+                }
+
+                return true;
+            });
+    }
+
+    findUsernameBySessionId(sessionId: string): Promise<string> {
+        return this.repository.findSessionBySessionId(sessionId)
+            .then((findSessionBySessionIdResult: any) => {
+                if (findSessionBySessionIdResult == null) {
+                    return null;
+                }
+
+                return findSessionBySessionIdResult.username;
+            });
+    }
+
     isEmptyOrSpace(str) {
         return str == undefined || str === null || str.match(/^ *$/) !== null;
     }

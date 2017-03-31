@@ -39,6 +39,9 @@ let invalidCode = 'fakecode';
 let validGrantType = 'authorization_code';
 let invalidGrantType = 'fakegranttype';
 
+let validSessionId = '123';
+let invalidSessionId = 'fakesessionid';
+
 
 function validateCredentialsFn(clientId, username: string, password: string): Promise<Boolean> {
   if (username == 'demousername' && password == 'demopassword') {
@@ -58,7 +61,13 @@ describe('GET /auth/authorize', () => {
     repository = new MockRepository();
     api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
 
-    done();
+    let p1 = repository.saveSession(validSessionId, validUsername);
+
+    Promise.all([
+      p1
+    ]).then((result) => {
+      done();
+    });
   });
 
 
@@ -74,16 +83,16 @@ describe('GET /auth/authorize', () => {
       .expect(400, done);
   });
 
-  it('should respond with status code 401 given invalid client id', (done) => {
+  it('should respond with status code 400 given invalid client id', (done) => {
     request(api.getApp())
       .get(`/auth/authorize?response_type=${validResponseType}&client_id=${invalidClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
-      .expect(401, done);
+      .expect(400, done);
   });
 
-  it('should respond with status code 401 given invalid redirect uri', (done) => {
+  it('should respond with status code 400 given invalid redirect uri', (done) => {
     request(api.getApp())
       .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${invalidRedirectUri}&scope=${validScope}`)
-      .expect(401, done);
+      .expect(400, done);
   });
 
 
@@ -91,6 +100,22 @@ describe('GET /auth/authorize', () => {
     request(api.getApp())
       .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
       .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
+      .expect(302, done);
+  });
+
+  it('should respond with status code 302 given valid parameters and valid session id', (done) => {
+    request(api.getApp())
+      .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
+      .set('Cookie', [`oauth2_session_id=${validSessionId}`])
+      .expect('Location', /.*\?token=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
+      .expect(302, done);
+  });
+
+  it('should respond with status code 302 given valid parameters and invalid session id', (done) => {
+    request(api.getApp())
+      .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
+      .set('Cookie', [`oauth2_session_id=${invalidSessionId}`])
+       .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
       .expect(302, done);
   });
 });

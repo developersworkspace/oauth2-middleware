@@ -117,6 +117,36 @@ export class Repository implements IRepository {
         });
     }
 
+    public saveSession(sessionId: string, username: string): Promise<Boolean> {
+        return this.mongoClient.connect(this.uri).then((db: Db) => {
+            let collection = db.collection('sessions');
+            return collection.insert({
+                sessionId: sessionId,
+                username: username
+            });
+        }).then((result: any) => {
+            return true;
+        });
+    }
+
+    public findSessionBySessionId(sessionId: string): Promise<any> {
+        return this.mongoClient.connect(this.uri).then((db: Db) => {
+            let collection = db.collection('sessions');
+            return collection.findOne({
+                sessionId: sessionId
+            });
+        }).then((result: any) => {
+            if (result) {
+                return null;
+            }
+
+            return {
+                sessionId: result.sessionId,
+                username: result.username
+            };
+        });
+    }
+
 }
 
 export interface IRepository {
@@ -127,4 +157,6 @@ export interface IRepository {
     saveCode(id: string, code: string, clientId: string, username: string, expiryTimestamp: number): Promise<Boolean>;
     findCodeByCode(code: string): Promise<any>;
     saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean>;
+    saveSession(sessionId: string, username: string): Promise<Boolean>;
+    findSessionBySessionId(sessionId: string): Promise<any>;
 }

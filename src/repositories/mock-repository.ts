@@ -19,6 +19,8 @@ export class MockRepository implements IRepository {
 
     private codes = [];
 
+    private sessions = [];
+
     constructor() {
 
     }
@@ -68,6 +70,21 @@ export class MockRepository implements IRepository {
 
     public findCodeByCode(code: string): Promise<any> {
         let result = this.codes.find(x => x.code == code);
+
+        return Promise.resolve(result);
+    }
+
+    public saveSession(sessionId: string, username: string): Promise<Boolean> {
+         this.sessions.push({
+            sessionId: sessionId,
+            username: username,
+        });
+
+        return Promise.resolve(true);
+    }
+
+    public findSessionBySessionId(sessionId: string): Promise<any> {
+        let result = this.sessions.find(x => x.sessionId == sessionId);
 
         return Promise.resolve(result);
     }
