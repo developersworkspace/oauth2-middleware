@@ -43,6 +43,8 @@ let validSessionId = '123';
 let validSessionId2 = '456';
 let invalidSessionId = 'fakesessionid';
 
+let validAccessToken  = '123';
+let invalidAccessToken = 'fakeaccesstoken';
 
 function validateCredentialsFn(clientId, username: string, password: string): Promise<Boolean> {
   if (username == 'demousername' && password == 'demopassword') {
@@ -280,25 +282,25 @@ describe('GET /auth/token', () => {
   it('should respond with status code 401 given invalid client id', (done) => {
     request(api.getApp())
       .get(`/auth/token?client_id=${invalidClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
-      .expect(401, done);
+      .expect(400, done);
   });
 
   it('should respond with status code 401 given invalid client secret', (done) => {
     request(api.getApp())
       .get(`/auth/token?client_id=${validClientId}&client_secret=${invalidClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
-      .expect(401, done);
+      .expect(400, done);
   });
 
   it('should respond with status code 401 given invalid redirect uri', (done) => {
     request(api.getApp())
       .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${invalidRedirectUri}`)
-      .expect(401, done);
+      .expect(400, done);
   });
 
   it('should respond with status code 401 given invalid token', (done) => {
     request(api.getApp())
       .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${invalidCode}&redirect_uri=${validRedirectUri}`)
-      .expect(401, done);
+      .expect(400, done);
   });
 
   it('should respond with status code 200 given valid parameters', (done) => {
@@ -311,9 +313,36 @@ describe('GET /auth/token', () => {
     wait(4000).then((result: any) => {
       request(api.getApp())
         .get(`/auth/token?client_id=${validClientId}&client_secret=${validClientSecret}&grant_type=${validGrantType}&code=${validCode}&redirect_uri=${validRedirectUri}`)
-        .expect(401, done);
+        .expect(400, done);
     });
   });
+});
+
+
+describe('GET /auth/getuser', () => {
+
+  beforeEach((done: Function) => {
+
+    repository = new MockRepository();
+    api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
+
+    let p1 = repository.saveAccessToken(validCode, validAccessToken, new Date().getTime() + 2000, validScope, validUsername);
+
+    Promise.all([
+      p1
+    ]).then((result) => {
+      done();
+    });
+  });
+
+  it('should respond with status code 200 given valid access token in header', (done) => {
+    request(api.getApp())
+      .get('/auth/getuser')
+      .set('Authorization', `Bearer ${validAccessToken}}`)
+      .expect(200, done);
+  });
+
+ 
 });
 
 function wait(miliSeconds: number) {

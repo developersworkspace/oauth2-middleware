@@ -26,6 +26,7 @@ export class OAuth2Middleware {
         this.router.post('/login', (req: Request, res: Response, next: Function) => { this.submitLogin(req, res, next); });
         this.router.get('/authorize', (req: Request, res: Response, next: Function) => { this.authorize(req, res, next); });
         this.router.get('/token', (req: Request, res: Response, next: Function) => { this.token(req, res, next); });
+        this.router.get('/getuser', (req: Request, res: Response, next: Function) => { this.getUser(req, res, next); });
     }
 
     private login(req: Request, res: Response, next: Function) {
@@ -38,14 +39,6 @@ export class OAuth2Middleware {
         }
 
         this.service.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult: any) => {
-            if (findAuthorizeInformationByIdResult == null) {
-                throw new Error('Invalid id provided');
-            }
-
-            if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
-                throw new Error('Expired id provided');
-            }
-
             return this.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
         }).then((findNameByClientIdResult: string) => {
             this.renderPage(res, 'login.html', {
@@ -70,14 +63,6 @@ export class OAuth2Middleware {
         let temp_findNameByClientIdResult = null;
 
         return this.service.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult: any) => {
-            if (findAuthorizeInformationByIdResult == null) {
-                throw new Error('Invalid id provided');
-            }
-
-            if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
-                throw new Error('Expired id provided');
-            }
-
             return Promise.all([
                 findAuthorizeInformationByIdResult,
                 this.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId),
@@ -159,11 +144,7 @@ export class OAuth2Middleware {
             return;
         }
 
-        this.service.validateClientId(clientId, redirectUri).then((validateClientIdResult: Boolean) => {
-            if (!validateClientIdResult) {
-                throw new Error('Invalid client id provided');
-            }
-
+        this.service.findClientByClientId(clientId, redirectUri).then((findClientByClientIdResult: any) => {
             return this.service.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
         }).then((saveAuthorizeInformationResult: Boolean) => {
 
@@ -175,15 +156,10 @@ export class OAuth2Middleware {
                 return null;
             }
 
-            return this.service.validateSessionId(oauth2_session_id);
-        }).then((validateSessionIdResult: Boolean) => {
-            if (!validateSessionIdResult) {
+            return this.service.findSessionBySessionId(oauth2_session_id).catch((err: Error) => {
                 return null;
-            } else {
-                return this.service.findSessionBySessionId(oauth2_session_id);
-            }
+            });
         }).then((findSessionBySessionIdResult: any) => {
-
             if (findSessionBySessionIdResult == null) {
                 return null;
             }
@@ -199,10 +175,9 @@ export class OAuth2Middleware {
             } else {
                 res.redirect(`${redirectUri}?token=${generateCodeResult}&state=${state}`);
             }
-        })
-            .catch((err: Error) => {
-                res.status(400).send(err.message);
-            });
+        }).catch((err: Error) => {
+            res.status(400).send(err.message);
+        });
 
 
     }
@@ -223,14 +198,8 @@ export class OAuth2Middleware {
             return;
         }
 
-        this.service.validateCode(clientId, clientSecret, code, redirectUri).then((validateCodeResult: Boolean) => {
-            if (validateCodeResult) {
-                return this.service.findUsernameByCode(code);
-            }
-
-            throw new Error('Invalid code provided');
-        }).then((findUsernameByCodeResult: string) => {
-            return this.service.generateAccessTokenObject(code, clientId, findUsernameByCodeResult, 'read');
+        this.service.findCodeByCode(clientId, clientSecret, code, redirectUri).then((findCodeByCodeResult: any) => {
+            return this.service.generateAccessTokenObject(code, clientId, findCodeByCodeResult.username, 'read');
         }).then((generateAccessTokenObjectResult: any) => {
             if (generateAccessTokenObjectResult == null) {
                 throw new Error('Failed to generate access token object');
@@ -240,6 +209,10 @@ export class OAuth2Middleware {
         }).catch((err: Error) => {
             res.status(400).send(err.message);
         });
+    }
+
+    private getUser(req: Request, res: Response, next: Function) {
+        // req.json();
     }
 
     private renderPage(res: Response, htmlFile: string, data: any, status: number) {

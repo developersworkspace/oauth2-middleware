@@ -10,45 +10,6 @@ export class Service {
 
     }
 
-    validateCode(clientId: string, clientSecret: string, code: string, redirectUri: string): Promise<Boolean> {
-        return this.repository.findCodeByCode(code).then((findCodeByCodeResult: any) => {
-            if (findCodeByCodeResult == null) {
-                return null;
-            }
-
-            if (findCodeByCodeResult.expiryTimestamp < new Date().getTime()) {
-                return null;
-            }
-
-            return this.findAuthorizeInformationById(findCodeByCodeResult.id);
-        }).then((findAuthorizeInformationByIdResult: any) => {
-            if (findAuthorizeInformationByIdResult == null) {
-                return null;
-            }
-
-            if (findAuthorizeInformationByIdResult.clientId != clientId) {
-                return null;
-            }
-
-            if (findAuthorizeInformationByIdResult.redirectUri != redirectUri) {
-                return null;
-            }
-
-
-            return this.repository.findClientByClientId(clientId);
-        }).then((findClientByClientIdResult: any) => {
-            if (findClientByClientIdResult == null) {
-                return false;
-            }
-
-            if (findClientByClientIdResult.clientSecret != clientSecret) {
-                return false;
-            }
-
-            return true;
-        })
-    }
-
     generateCode(id: string, clientId: string, username: string): Promise<string> {
         let code = uuid.v4();
         return this.repository.saveCode(id, code, clientId, username, new Date().getTime() + this.codeExpiryMiliseconds).then((result: Boolean) => {
@@ -75,13 +36,46 @@ export class Service {
         });
     }
 
-    findUsernameByCode(code: string): Promise<string> {
+
+    findCodeByCode(clientId: string, clientSecret: string, code: string, redirectUri: string): Promise<any> {
+        
+        let codeObject: any = null;
         return this.repository.findCodeByCode(code).then((findCodeByCodeResult: any) => {
             if (findCodeByCodeResult == null) {
-                return null;
+                throw new Error('Invalid code provided');
             }
 
-            return findCodeByCodeResult.username;
+            if (findCodeByCodeResult.expiryTimestamp < new Date().getTime()) {
+                throw new Error('Expired code provided');
+            }
+
+            codeObject = findCodeByCodeResult;
+
+            return this.findAuthorizeInformationById(findCodeByCodeResult.id);
+        }).then((findAuthorizeInformationByIdResult: any) => {
+            if (findAuthorizeInformationByIdResult == null) {
+                throw new Error('Invalid id attached to code provided');
+            }
+
+            if (findAuthorizeInformationByIdResult.clientId != clientId) {
+                throw new Error('Invalid client id provided');
+            }
+
+            if (findAuthorizeInformationByIdResult.redirectUri != redirectUri) {
+                throw new Error('Invalid redirect uri provided');
+            }
+
+            return this.repository.findClientByClientId(clientId);
+        }).then((findClientByClientIdResult: any) => {
+            if (findClientByClientIdResult == null) {
+                throw new Error('Invalid client id provided');
+            }
+
+            if (findClientByClientIdResult.clientSecret != clientSecret) {
+                throw new Error('Invalid client secret provided');
+            }
+
+            return codeObject;
         });
     }
 
@@ -90,7 +84,17 @@ export class Service {
     }
 
     findAuthorizeInformationById(id: string): Promise<any> {
-        return this.repository.findAuthorizeInformationById(id);
+        return this.repository.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult: any) => {
+            if (findAuthorizeInformationByIdResult == null) {
+                throw new Error('Invalid id provided');
+            }
+
+            if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
+                throw new Error('Expired id provided');
+            }
+
+            return findAuthorizeInformationByIdResult;
+        });
     }
 
     findNameByClientId(clientId: string): Promise<string> {
@@ -99,16 +103,16 @@ export class Service {
         });
     }
 
-    validateClientId(clientId: string, redirectUri: string): Promise<Boolean> {
+    findClientByClientId(clientId: string, redirectUri: string): Promise<Boolean> {
         return this.repository.findClientByClientId(clientId).then((findClientByClientIdResult: any) => {
             if (findClientByClientIdResult == null) {
-                return false;
+                throw new Error('Invalid client id provided');
             }
 
             if (findClientByClientIdResult.redirectUris.indexOf(redirectUri) == -1) {
-                return false;
+                throw new Error('Invalid redirect uri provided');
             }
-            return true;
+            return findClientByClientIdResult;
         });
     }
 
@@ -121,22 +125,11 @@ export class Service {
         return this.repository.saveSession(sessionId, username, clientId);
     }
 
-    validateSessionId(sessionId: string): Promise<Boolean> {
-        return this.repository.findSessionBySessionId(sessionId)
-            .then((findSessionBySessionIdResult: any) => {
-                if (findSessionBySessionIdResult == null) {
-                    return false;
-                }
-
-                return true;
-            });
-    }
-
     findSessionBySessionId(sessionId: string): Promise<string> {
         return this.repository.findSessionBySessionId(sessionId)
             .then((findSessionBySessionIdResult: any) => {
                 if (findSessionBySessionIdResult == null) {
-                    return null;
+                    throw new Error('Invalid session id provided');
                 }
 
                 return findSessionBySessionIdResult;
