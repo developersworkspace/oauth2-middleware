@@ -119,7 +119,7 @@ class Service {
             if (findAccessTokenByAccessTokenResult == null) {
                 throw new Error('Invalid access token provided');
             }
-            if (findAccessTokenByAccessTokenResult.expiresIn <= 0) {
+            if (findAccessTokenByAccessTokenResult.expires_in <= 0) {
                 throw new Error('Expired access token provided');
             }
             return findAccessTokenByAccessTokenResult;

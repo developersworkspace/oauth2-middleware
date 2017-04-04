@@ -154,7 +154,7 @@ export class Service {
             }
 
 
-            if (findAccessTokenByAccessTokenResult.expiresIn <= 0) {
+            if (findAccessTokenByAccessTokenResult.expires_in <= 0) {
                 throw new Error('Expired access token provided');
             }
 
