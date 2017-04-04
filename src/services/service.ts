@@ -1,8 +1,10 @@
 // Imports
 import * as uuid from 'uuid';
+import * as co from 'co';
 
 // Imports repositories
 import { IRepository } from './../repositories/repository';
+
 
 export class Service {
 
@@ -38,9 +40,11 @@ export class Service {
 
 
     findCodeByCode(clientId: string, clientSecret: string, code: string, redirectUri: string): Promise<any> {
-        
-        let codeObject: any = null;
-        return this.repository.findCodeByCode(code).then((findCodeByCodeResult: any) => {
+
+        let self = this;
+        return co(function* () {
+            let findCodeByCodeResult = yield self.repository.findCodeByCode(code);
+           
             if (findCodeByCodeResult == null) {
                 throw new Error('Invalid code provided');
             }
@@ -49,10 +53,8 @@ export class Service {
                 throw new Error('Expired code provided');
             }
 
-            codeObject = findCodeByCodeResult;
+            let findAuthorizeInformationByIdResult = yield self.findAuthorizeInformationById(findCodeByCodeResult.id);
 
-            return this.findAuthorizeInformationById(findCodeByCodeResult.id);
-        }).then((findAuthorizeInformationByIdResult: any) => {
             if (findAuthorizeInformationByIdResult == null) {
                 throw new Error('Invalid id attached to code provided');
             }
@@ -65,8 +67,8 @@ export class Service {
                 throw new Error('Invalid redirect uri provided');
             }
 
-            return this.repository.findClientByClientId(clientId);
-        }).then((findClientByClientIdResult: any) => {
+            let findClientByClientIdResult = yield self.repository.findClientByClientId(clientId);
+
             if (findClientByClientIdResult == null) {
                 throw new Error('Invalid client id provided');
             }
@@ -75,8 +77,9 @@ export class Service {
                 throw new Error('Invalid client secret provided');
             }
 
-            return codeObject;
+            return findCodeByCodeResult;
         });
+
     }
 
     validateCredentials(clientId: string, username: string, password: string): Promise<Boolean> {
