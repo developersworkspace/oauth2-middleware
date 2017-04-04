@@ -133,5 +133,26 @@ class Repository {
             };
         });
     }
+    findAccessTokenByAccessToken(accessToken) {
+        return this.mongoClient.connect(this.uri).then((db) => {
+            let collection = db.collection('access_tokens');
+            return collection.findOne({
+                accessToken: accessToken
+            });
+        }).then((result) => {
+            if (result) {
+                return null;
+            }
+            return {
+                access_token: accessToken,
+                token_type: "bearer",
+                expires_in: result.expiryTimestamp - new Date().getTime(),
+                scope: result.scope,
+                info: {
+                    username: result.username
+                }
+            };
+        });
+    }
 }
 exports.Repository = Repository;

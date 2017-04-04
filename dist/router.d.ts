@@ -14,5 +14,6 @@ export declare class OAuth2Middleware {
     private submitLogin(req, res, next);
     private authorize(req, res, next);
     private token(req, res, next);
+    private getUser(req, res, next);
     private renderPage(res, htmlFile, data, status);
 }

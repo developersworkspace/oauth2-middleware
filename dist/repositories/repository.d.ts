@@ -10,6 +10,7 @@ export declare class Repository implements IRepository {
     findCodeByCode(code: string): Promise<any>;
     saveSession(sessionId: string, username: string, clientId: string): Promise<Boolean>;
     findSessionBySessionId(sessionId: string): Promise<any>;
+    findAccessTokenByAccessToken(accessToken: string): Promise<any>;
 }
 export interface IRepository {
     saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string, expiryTimestamp: number): Promise<Boolean>;
@@ -20,4 +21,5 @@ export interface IRepository {
     saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean>;
     saveSession(sessionId: string, username: string, clientId: string): Promise<Boolean>;
     findSessionBySessionId(sessionId: string): Promise<any>;
+    findAccessTokenByAccessToken(accessToken: string): Promise<any>;
 }

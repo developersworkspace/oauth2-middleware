@@ -4,6 +4,7 @@ const express = require("express");
 const uuid = require("uuid");
 const fs = require("graceful-fs");
 const Handlebars = require("handlebars");
+const co = require("co");
 // Imports services
 const service_1 = require("./services/service");
 class OAuth2Middleware {
@@ -19,6 +20,7 @@ class OAuth2Middleware {
         this.router.post('/login', (req, res, next) => { this.submitLogin(req, res, next); });
         this.router.get('/authorize', (req, res, next) => { this.authorize(req, res, next); });
         this.router.get('/token', (req, res, next) => { this.token(req, res, next); });
+        this.router.get('/getuser', (req, res, next) => { this.getUser(req, res, next); });
     }
     login(req, res, next) {
         let id = req.query.id;
@@ -26,16 +28,11 @@ class OAuth2Middleware {
             res.status(400).send('Invalid parameters provided');
             return;
         }
-        this.service.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult) => {
-            if (findAuthorizeInformationByIdResult == null) {
-                throw new Error('Invalid id provided');
-            }
-            if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
-                throw new Error('Expired id provided');
-            }
-            return this.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
-        }).then((findNameByClientIdResult) => {
-            this.renderPage(res, 'login.html', {
+        let self = this;
+        co(function* () {
+            let findAuthorizeInformationByIdResult = yield self.service.findAuthorizeInformationById(id);
+            let findNameByClientIdResult = yield self.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
+            self.renderPage(res, 'login.html', {
                 id: id,
                 name: findNameByClientIdResult,
                 message: null
@@ -49,62 +46,33 @@ class OAuth2Middleware {
         let password = req.body.password;
         let id = req.query.id;
         let oauth2_session_id = uuid.v4();
-        let temp_findNameByClientIdResult = null;
-        return this.service.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult) => {
-            if (findAuthorizeInformationByIdResult == null) {
-                throw new Error('Invalid id provided');
-            }
-            if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
-                throw new Error('Expired id provided');
-            }
-            return Promise.all([
-                findAuthorizeInformationByIdResult,
-                this.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId),
-                this.service.validateCredentials(findAuthorizeInformationByIdResult.clientId, username, password)
-            ]);
-        }).then((results) => {
-            let findAuthorizeInformationByIdResult = results == null ? null : results[0];
-            let findNameByClientIdResult = results == null ? null : results[1];
-            let validateCredentialsResult = results == null ? null : results[2];
-            temp_findNameByClientIdResult = findNameByClientIdResult;
+        let self = this;
+        let name = null;
+        co(function* () {
+            let findAuthorizeInformationByIdResult = yield self.service.findAuthorizeInformationById(id);
+            let findNameByClientIdResult = yield self.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
+            let validateCredentialsResult = yield self.service.validateCredentials(findAuthorizeInformationByIdResult.clientId, username, password);
+            name = findNameByClientIdResult.name;
             if (findNameByClientIdResult == null) {
                 throw new Error('Invalid client id provided');
             }
-            else if (!validateCredentialsResult) {
+            if (!validateCredentialsResult) {
                 throw new Error('Invalid credentials provided');
             }
-            else {
-                return Promise.all([
-                    findAuthorizeInformationByIdResult,
-                    findNameByClientIdResult,
-                    this.service.generateCode(id, findAuthorizeInformationByIdResult.clientId, username)
-                ]);
-            }
-        }).then((results) => {
-            let findAuthorizeInformationByIdResult = results == null ? null : results[0];
-            let findNameByClientIdResult = results == null ? null : results[1];
-            let generateCodeResult = results == null ? null : results[2];
+            let generateCodeResult = yield self.service.generateCode(id, findAuthorizeInformationByIdResult.clientId, username);
             if (generateCodeResult == null) {
                 throw Error('Failed to generate code');
             }
-            return Promise.all([
-                findAuthorizeInformationByIdResult,
-                generateCodeResult,
-                this.service.saveSession(oauth2_session_id, username, findAuthorizeInformationByIdResult.clientId)
-            ]);
-        }).then((results) => {
-            let findAuthorizeInformationByIdResult = results == null ? null : results[0];
-            let generateCodeResult = results == null ? null : results[1];
-            let saveSessionResult = results == null ? null : results[2];
+            let saveSessionResult = yield self.service.saveSession(oauth2_session_id, username, findAuthorizeInformationByIdResult.clientId);
             if (!saveSessionResult) {
                 throw new Error('Failed to save session');
             }
             res.cookie(`oauth2_session_id_${findAuthorizeInformationByIdResult.clientId}`, oauth2_session_id, { maxAge: 1800, });
             res.redirect(`${findAuthorizeInformationByIdResult.redirectUri}?token=${generateCodeResult}&state=${findAuthorizeInformationByIdResult.state}`);
         }).catch((err) => {
-            this.renderPage(res, 'login.html', {
+            self.renderPage(res, 'login.html', {
                 id: id,
-                name: temp_findNameByClientIdResult,
+                name: name,
                 message: err.message
             }, 401);
         });
@@ -125,43 +93,27 @@ class OAuth2Middleware {
             res.status(400).send('Invalid response_type provided');
             return;
         }
-        this.service.validateClientId(clientId, redirectUri).then((validateClientIdResult) => {
-            if (!validateClientIdResult) {
-                throw new Error('Invalid client id provided');
-            }
-            return this.service.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
-        }).then((saveAuthorizeInformationResult) => {
+        let self = this;
+        co(function* () {
+            let findClientByClientIdResult = yield self.service.findClientByClientId(clientId, redirectUri);
+            let saveAuthorizeInformationResult = yield self.service.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
             if (!saveAuthorizeInformationResult) {
                 throw new Error('Failed to save authorize information');
             }
             if (oauth2_session_id == null) {
-                return null;
-            }
-            return this.service.validateSessionId(oauth2_session_id);
-        }).then((validateSessionIdResult) => {
-            if (!validateSessionIdResult) {
-                return null;
-            }
-            else {
-                return this.service.findSessionBySessionId(oauth2_session_id);
-            }
-        }).then((findSessionBySessionIdResult) => {
-            if (findSessionBySessionIdResult == null) {
-                return null;
-            }
-            if (findSessionBySessionIdResult.clientId != clientId) {
-                return null;
-            }
-            return this.service.generateCode(id, clientId, findSessionBySessionIdResult.username);
-        }).then((generateCodeResult) => {
-            if (generateCodeResult == null) {
                 res.redirect(`login?id=${id}`);
+                return;
             }
-            else {
-                res.redirect(`${redirectUri}?token=${generateCodeResult}&state=${state}`);
+            let findSessionBySessionIdResult = yield self.service.findSessionBySessionId(oauth2_session_id, clientId).catch((err) => {
+                return null;
+            });
+            if (findSessionBySessionIdResult == null) {
+                res.redirect(`login?id=${id}`);
+                return;
             }
-        })
-            .catch((err) => {
+            let generateCodeResult = yield self.service.generateCode(id, clientId, findSessionBySessionIdResult.username);
+            res.redirect(`${redirectUri}?token=${generateCodeResult}&state=${state}`);
+        }).catch((err) => {
             res.status(400).send(err.message);
         });
     }
@@ -179,18 +131,25 @@ class OAuth2Middleware {
             res.status(400).send('Invalid grant_type provided');
             return;
         }
-        this.service.validateCode(clientId, clientSecret, code, redirectUri).then((validateCodeResult) => {
-            if (validateCodeResult) {
-                return this.service.findUsernameByCode(code);
-            }
-            throw new Error('Invalid code provided');
-        }).then((findUsernameByCodeResult) => {
-            return this.service.generateAccessTokenObject(code, clientId, findUsernameByCodeResult, 'read');
-        }).then((generateAccessTokenObjectResult) => {
+        let self = this;
+        co(function* () {
+            let findCodeByCodeResult = yield self.service.findCodeByCode(clientId, clientSecret, code, redirectUri);
+            let generateAccessTokenObjectResult = yield self.service.generateAccessTokenObject(code, clientId, findCodeByCodeResult.username, 'read');
             if (generateAccessTokenObjectResult == null) {
                 throw new Error('Failed to generate access token object');
             }
             res.json(generateAccessTokenObjectResult);
+        }).catch((err) => {
+            res.status(400).send(err.message);
+        });
+    }
+    getUser(req, res, next) {
+        if (req.get('Authorization') == null) {
+            res.status(400).send('No access token provided');
+            return;
+        }
+        this.service.findAccessTokenByAccessToken(req.get('Authorization').split(' ')[1]).then((findAccessTokenByAccessTokenResult) => {
+            res.json(findAccessTokenByAccessTokenResult);
         }).catch((err) => {
             res.status(400).send(err.message);
         });

@@ -4,6 +4,7 @@ export declare class MockRepository implements IRepository {
     private clients;
     private codes;
     private sessions;
+    private accessTokens;
     constructor();
     saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string, expiryTimestamp: number): Promise<Boolean>;
     findAuthorizeInformationById(id: string): Promise<any>;
@@ -13,4 +14,5 @@ export declare class MockRepository implements IRepository {
     findCodeByCode(code: string): Promise<any>;
     saveSession(sessionId: string, username: string, clientId: string): Promise<Boolean>;
     findSessionBySessionId(sessionId: string): Promise<any>;
+    findAccessTokenByAccessToken(accessToken: string): Promise<any>;
 }

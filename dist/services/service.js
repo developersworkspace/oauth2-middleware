@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 // Imports
 const uuid = require("uuid");
+const co = require("co");
 class Service {
     constructor(validateCredentialsFn, repository, idExpiryMiliseconds, codeExpiryMiliseconds, accessTokenExpiryMiliseconds) {
         this.validateCredentialsFn = validateCredentialsFn;
@@ -9,36 +10,6 @@ class Service {
         this.idExpiryMiliseconds = idExpiryMiliseconds;
         this.codeExpiryMiliseconds = codeExpiryMiliseconds;
         this.accessTokenExpiryMiliseconds = accessTokenExpiryMiliseconds;
-    }
-    validateCode(clientId, clientSecret, code, redirectUri) {
-        return this.repository.findCodeByCode(code).then((findCodeByCodeResult) => {
-            if (findCodeByCodeResult == null) {
-                return null;
-            }
-            if (findCodeByCodeResult.expiryTimestamp < new Date().getTime()) {
-                return null;
-            }
-            return this.findAuthorizeInformationById(findCodeByCodeResult.id);
-        }).then((findAuthorizeInformationByIdResult) => {
-            if (findAuthorizeInformationByIdResult == null) {
-                return null;
-            }
-            if (findAuthorizeInformationByIdResult.clientId != clientId) {
-                return null;
-            }
-            if (findAuthorizeInformationByIdResult.redirectUri != redirectUri) {
-                return null;
-            }
-            return this.repository.findClientByClientId(clientId);
-        }).then((findClientByClientIdResult) => {
-            if (findClientByClientIdResult == null) {
-                return false;
-            }
-            if (findClientByClientIdResult.clientSecret != clientSecret) {
-                return false;
-            }
-            return true;
-        });
     }
     generateCode(id, clientId, username) {
         let code = uuid.v4();
@@ -62,34 +33,64 @@ class Service {
             });
         });
     }
-    findUsernameByCode(code) {
-        return this.repository.findCodeByCode(code).then((findCodeByCodeResult) => {
+    findCodeByCode(clientId, clientSecret, code, redirectUri) {
+        let self = this;
+        return co(function* () {
+            let findCodeByCodeResult = yield self.repository.findCodeByCode(code);
             if (findCodeByCodeResult == null) {
-                return null;
+                throw new Error('Invalid code provided');
             }
-            return findCodeByCodeResult.username;
+            if (findCodeByCodeResult.expiryTimestamp < new Date().getTime()) {
+                throw new Error('Expired code provided');
+            }
+            let findAuthorizeInformationByIdResult = yield self.findAuthorizeInformationById(findCodeByCodeResult.id);
+            if (findAuthorizeInformationByIdResult == null) {
+                throw new Error('Invalid id attached to code provided');
+            }
+            if (findAuthorizeInformationByIdResult.clientId != clientId) {
+                throw new Error('Invalid client id provided');
+            }
+            if (findAuthorizeInformationByIdResult.redirectUri != redirectUri) {
+                throw new Error('Invalid redirect uri provided');
+            }
+            let findClientByClientIdResult = yield self.repository.findClientByClientId(clientId);
+            if (findClientByClientIdResult == null) {
+                throw new Error('Invalid client id provided');
+            }
+            if (findClientByClientIdResult.clientSecret != clientSecret) {
+                throw new Error('Invalid client secret provided');
+            }
+            return findCodeByCodeResult;
         });
     }
     validateCredentials(clientId, username, password) {
         return this.validateCredentialsFn(clientId, username, password);
     }
     findAuthorizeInformationById(id) {
-        return this.repository.findAuthorizeInformationById(id);
+        return this.repository.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult) => {
+            if (findAuthorizeInformationByIdResult == null) {
+                throw new Error('Invalid id provided');
+            }
+            if (findAuthorizeInformationByIdResult.expiryTimestamp < new Date().getTime()) {
+                throw new Error('Expired id provided');
+            }
+            return findAuthorizeInformationByIdResult;
+        });
     }
     findNameByClientId(clientId) {
         return this.repository.findClientByClientId(clientId).then((findClientByClientIdResult) => {
             return findClientByClientIdResult.name;
         });
     }
-    validateClientId(clientId, redirectUri) {
+    findClientByClientId(clientId, redirectUri) {
         return this.repository.findClientByClientId(clientId).then((findClientByClientIdResult) => {
             if (findClientByClientIdResult == null) {
-                return false;
+                throw new Error('Invalid client id provided');
             }
             if (findClientByClientIdResult.redirectUris.indexOf(redirectUri) == -1) {
-                return false;
+                throw new Error('Invalid redirect uri provided');
             }
-            return true;
+            return findClientByClientIdResult;
         });
     }
     saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state) {
@@ -99,22 +100,29 @@ class Service {
     saveSession(sessionId, username, clientId) {
         return this.repository.saveSession(sessionId, username, clientId);
     }
-    validateSessionId(sessionId) {
+    findSessionBySessionId(sessionId, clientId) {
         return this.repository.findSessionBySessionId(sessionId)
             .then((findSessionBySessionIdResult) => {
             if (findSessionBySessionIdResult == null) {
-                return false;
+                throw new Error('Invalid session id provided');
             }
-            return true;
-        });
-    }
-    findSessionBySessionId(sessionId) {
-        return this.repository.findSessionBySessionId(sessionId)
-            .then((findSessionBySessionIdResult) => {
-            if (findSessionBySessionIdResult == null) {
-                return null;
+            if (findSessionBySessionIdResult.clientId != clientId) {
+                throw new Error('Invalid session id provided');
             }
             return findSessionBySessionIdResult;
+        });
+    }
+    findAccessTokenByAccessToken(accessToken) {
+        let self = this;
+        return co(function* () {
+            let findAccessTokenByAccessTokenResult = yield self.repository.findAccessTokenByAccessToken(accessToken);
+            if (findAccessTokenByAccessTokenResult == null) {
+                throw new Error('Invalid access token provided');
+            }
+            if (findAccessTokenByAccessTokenResult.expiresIn <= 0) {
+                throw new Error('Expired access token provided');
+            }
+            return findAccessTokenByAccessTokenResult;
         });
     }
     isEmptyOrSpace(str) {

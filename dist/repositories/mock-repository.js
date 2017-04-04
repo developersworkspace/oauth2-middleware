@@ -16,6 +16,7 @@ class MockRepository {
         ];
         this.codes = [];
         this.sessions = [];
+        this.accessTokens = [];
     }
     saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state, expiryTimestamp) {
         this.authorizeInformation.push({
@@ -47,6 +48,13 @@ class MockRepository {
         return Promise.resolve(true);
     }
     saveAccessToken(code, accessToken, expiryTimestamp, scope, username) {
+        this.accessTokens.push({
+            code: code,
+            accessToken: accessToken,
+            expiryTimestamp: expiryTimestamp,
+            scope: scope,
+            username: username
+        });
         return Promise.resolve(true);
     }
     findCodeByCode(code) {
@@ -64,6 +72,21 @@ class MockRepository {
     findSessionBySessionId(sessionId) {
         let result = this.sessions.find(x => x.sessionId == sessionId);
         return Promise.resolve(result);
+    }
+    findAccessTokenByAccessToken(accessToken) {
+        let result = this.accessTokens.find(x => x.accessToken == accessToken);
+        if (result == null) {
+            return Promise.resolve(null);
+        }
+        return Promise.resolve({
+            access_token: accessToken,
+            token_type: "bearer",
+            expires_in: result.expiryTimestamp - new Date().getTime(),
+            scope: result.scope,
+            info: {
+                username: result.username
+            }
+        });
     }
 }
 exports.MockRepository = MockRepository;
