@@ -21,6 +21,8 @@ export class MockRepository implements IRepository {
 
     private sessions = [];
 
+    private accessTokens = [];
+
     constructor() {
 
     }
@@ -65,6 +67,14 @@ export class MockRepository implements IRepository {
 
 
     public saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean> {
+        this.accessTokens.push({
+            code: code,
+            accessToken: accessToken,
+            expiryTimestamp: expiryTimestamp,
+            scope: scope,
+            username: username
+        });
+
         return Promise.resolve(true);
     }
 
@@ -75,7 +85,7 @@ export class MockRepository implements IRepository {
     }
 
     public saveSession(sessionId: string, username: string, clientId: string): Promise<Boolean> {
-         this.sessions.push({
+        this.sessions.push({
             sessionId: sessionId,
             username: username,
             clientId: clientId
@@ -88,6 +98,24 @@ export class MockRepository implements IRepository {
         let result = this.sessions.find(x => x.sessionId == sessionId);
 
         return Promise.resolve(result);
+    }
+
+    findAccessTokenByAccessToken(accessToken: string): Promise<any> {
+        let result = this.accessTokens.find(x => x.accessToken == accessToken);
+
+        if (result == null) {
+            return Promise.resolve(null);
+        }
+
+        return Promise.resolve({
+            access_token: accessToken,
+            token_type: "bearer",
+            expires_in: result.expiryTimestamp - new Date().getTime(),
+            scope: result.scope,
+            info: {
+                username: result.username
+            }
+        });
     }
 
 }

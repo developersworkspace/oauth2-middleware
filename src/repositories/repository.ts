@@ -149,6 +149,29 @@ export class Repository implements IRepository {
         });
     }
 
+    findAccessTokenByAccessToken(accessToken: string): Promise<any> {
+        return this.mongoClient.connect(this.uri).then((db: Db) => {
+            let collection = db.collection('access_tokens');
+            return collection.findOne({
+                accessToken: accessToken
+            });
+        }).then((result: any) => {
+            if (result) {
+                return null;
+            }
+
+            return {
+                access_token: accessToken,
+                token_type: "bearer",
+                expires_in: result.expiryTimestamp - new Date().getTime(),
+                scope: result.scope,
+                info: {
+                    username: result.username
+                }
+            };
+        });
+    }
+
 }
 
 export interface IRepository {
@@ -161,4 +184,5 @@ export interface IRepository {
     saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean>;
     saveSession(sessionId: string, username: string, clientId: string): Promise<Boolean>;
     findSessionBySessionId(sessionId: string): Promise<any>;
+    findAccessTokenByAccessToken(accessToken: string): Promise<any>;
 }

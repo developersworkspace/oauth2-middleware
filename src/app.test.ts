@@ -43,7 +43,7 @@ let validSessionId = '123';
 let validSessionId2 = '456';
 let invalidSessionId = 'fakesessionid';
 
-let validAccessToken  = '123';
+let validAccessToken = '123';
 let invalidAccessToken = 'fakeaccesstoken';
 
 function validateCredentialsFn(clientId, username: string, password: string): Promise<Boolean> {
@@ -120,7 +120,7 @@ describe('GET /auth/authorize', () => {
     request(api.getApp())
       .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
       .set('Cookie', [`oauth2_session_id_${validClientId}=${invalidSessionId}`])
-       .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
+      .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
       .expect(302, done);
   });
 
@@ -128,7 +128,7 @@ describe('GET /auth/authorize', () => {
     request(api.getApp())
       .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${validRedirectUri}&scope=${validScope}`)
       .set('Cookie', [`oauth2_session_id_${validClientId}=${validSessionId2}`])
-       .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
+      .expect('Location', /login\?id=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
       .expect(302, done);
   });
 });
@@ -338,11 +338,32 @@ describe('GET /auth/getuser', () => {
   it('should respond with status code 200 given valid access token in header', (done) => {
     request(api.getApp())
       .get('/auth/getuser')
-      .set('Authorization', `Bearer ${validAccessToken}}`)
+      .set('Authorization', `Bearer ${validAccessToken}`)
       .expect(200, done);
   });
 
- 
+  it('should respond with status code 400 given invalid access token in header', (done) => {
+    request(api.getApp())
+      .get('/auth/getuser')
+      .set('Authorization', `Bearer ${invalidAccessToken}`)
+      .expect(400, done);
+  });
+
+  it('should respond with status code 400 given no access token in header', (done) => {
+    request(api.getApp())
+      .get('/auth/getuser')
+      .expect(400, done);
+  });
+
+  it('should respond with status code 400 given expired access token in header', (done) => {
+    wait(4000).then((result: any) => {
+      request(api.getApp())
+        .get('/auth/getuser')
+        .set('Authorization', `Bearer ${validAccessToken}`)
+        .expect(400, done);
+    });
+  });
+
 });
 
 function wait(miliSeconds: number) {

@@ -144,16 +144,11 @@ export class OAuth2Middleware {
                 return;
             }
 
-            let findSessionBySessionIdResult = yield self.service.findSessionBySessionId(oauth2_session_id).catch((err: Error) => {
+            let findSessionBySessionIdResult = yield self.service.findSessionBySessionId(oauth2_session_id, clientId).catch((err: Error) => {
                 return null;
             });
 
             if (findSessionBySessionIdResult == null) {
-                res.redirect(`login?id=${id}`);
-                return;
-            }
-
-            if (findSessionBySessionIdResult.clientId != clientId) {
                 res.redirect(`login?id=${id}`);
                 return;
             }
@@ -183,9 +178,14 @@ export class OAuth2Middleware {
             return;
         }
 
-        this.service.findCodeByCode(clientId, clientSecret, code, redirectUri).then((findCodeByCodeResult: any) => {
-            return this.service.generateAccessTokenObject(code, clientId, findCodeByCodeResult.username, 'read');
-        }).then((generateAccessTokenObjectResult: any) => {
+
+        let self = this;
+
+        co(function* () {
+            let findCodeByCodeResult = yield self.service.findCodeByCode(clientId, clientSecret, code, redirectUri);
+
+            let generateAccessTokenObjectResult = yield self.service.generateAccessTokenObject(code, clientId, findCodeByCodeResult.username, 'read');
+
             if (generateAccessTokenObjectResult == null) {
                 throw new Error('Failed to generate access token object');
             }
@@ -197,7 +197,16 @@ export class OAuth2Middleware {
     }
 
     private getUser(req: Request, res: Response, next: Function) {
-        // req.json();
+        if (req.get('Authorization') == null) {
+            res.status(400).send('No access token provided');
+            return;
+        }
+
+        this.service.findAccessTokenByAccessToken(req.get('Authorization').split(' ')[1]).then((findAccessTokenByAccessTokenResult: any) => {
+            res.json(findAccessTokenByAccessTokenResult);
+        }).catch((err: Error) => {
+            res.status(400).send(err.message);
+        });
     }
 
     private renderPage(res: Response, htmlFile: string, data: any, status: number) {

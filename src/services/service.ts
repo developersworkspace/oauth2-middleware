@@ -44,7 +44,7 @@ export class Service {
         let self = this;
         return co(function* () {
             let findCodeByCodeResult = yield self.repository.findCodeByCode(code);
-           
+
             if (findCodeByCodeResult == null) {
                 throw new Error('Invalid code provided');
             }
@@ -128,15 +128,40 @@ export class Service {
         return this.repository.saveSession(sessionId, username, clientId);
     }
 
-    findSessionBySessionId(sessionId: string): Promise<string> {
+    findSessionBySessionId(sessionId: string, clientId: string): Promise<string> {
         return this.repository.findSessionBySessionId(sessionId)
             .then((findSessionBySessionIdResult: any) => {
                 if (findSessionBySessionIdResult == null) {
                     throw new Error('Invalid session id provided');
                 }
 
+                if (findSessionBySessionIdResult.clientId != clientId) {
+                    throw new Error('Invalid session id provided');
+                }
+
                 return findSessionBySessionIdResult;
             });
+    }
+
+    findAccessTokenByAccessToken(accessToken: string): Promise<any> {
+
+        let self = this;
+        return co(function* () {
+            let findAccessTokenByAccessTokenResult = yield self.repository.findAccessTokenByAccessToken(accessToken);
+
+            if (findAccessTokenByAccessTokenResult == null) {
+                throw new Error('Invalid access token provided');
+            }
+
+
+            if (findAccessTokenByAccessTokenResult.expiresIn <= 0) {
+                throw new Error('Expired access token provided');
+            }
+
+            return findAccessTokenByAccessTokenResult;
+
+        });
+
     }
 
     isEmptyOrSpace(str) {
