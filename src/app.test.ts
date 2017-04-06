@@ -134,7 +134,9 @@ describe('GET /auth/authorize', () => {
 });
 
 
-describe('GET /auth/login', () => {
+describe('GET /auth/login', function () {
+
+  this.timeout(20000);
 
   beforeEach((done: Function) => {
 
@@ -177,7 +179,9 @@ describe('GET /auth/login', () => {
   });
 });
 
-describe('POST /auth/login', () => {
+describe('POST /auth/login', function () {
+
+  this.timeout(20000);
 
   beforeEach((done: Function) => {
 
@@ -249,7 +253,9 @@ describe('POST /auth/login', () => {
   });
 });
 
-describe('GET /auth/token', () => {
+describe('GET /auth/token', function () {
+
+  this.timeout(20000);
 
   beforeEach((done: Function) => {
 
@@ -319,8 +325,10 @@ describe('GET /auth/token', () => {
 });
 
 
-describe('GET /auth/getuser', () => {
+describe('GET /auth/getuser', function () {
 
+  this.timeout(20000);
+  
   beforeEach((done: Function) => {
 
     repository = new MockRepository();

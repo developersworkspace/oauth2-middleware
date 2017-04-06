@@ -5,8 +5,8 @@
   "main": "./dist/index.js",
   "scripts": {
     "start": "gulp build:dev & node ./src/app.js",
-    "test": "gulp build:dev & mocha --timeout=5000 ./src/**/*.test.js & gulp clean:js",
-    "cover": "gulp build:dev & istanbul cover node_modules/mocha/bin/_mocha --timeout 60000 --root ./src ./src/**/*.test.js & gulp clean:js",
+    "test": "gulp build:dev & mocha ./src/**/*.test.js & gulp clean:js",
+    "cover": "gulp build:dev & istanbul cover node_modules/mocha/bin/_mocha --root ./src ./src/**/*.test.js & gulp clean:js",
     "pub": "gulp build:prod & npm publish & gulp clean:dist"
   },
   "repository": {
