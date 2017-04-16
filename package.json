@@ -4,10 +4,12 @@
   "description": "OAuth2 Router/Middleware",
   "main": "./dist/index.js",
   "scripts": {
-    "start": "gulp build:dev & node ./src/app.js",
-    "test": "gulp build:dev & mocha ./src/**/*.test.js & gulp clean:js",
-    "cover": "gulp build:dev & istanbul cover node_modules/mocha/bin/_mocha --root ./src ./src/**/*.test.js & gulp clean:js",
-    "pub": "gulp build:prod & npm publish & gulp clean:dist"
+    "build": "gulp build",
+    "lint": "tslint --fix --exclude ./src/**/config.* ./src/**/*.ts",
+    "start": "gulp build:dev & node ./dist/app.js",
+    "test": "gulp build:dev & mocha --timeout=5000 ./dist/**/*.test.js & gulp clean",
+    "cover": "gulp build:dev & istanbul cover node_modules/mocha/bin/_mocha --root ./dist ./dist/**/*.test.js & gulp clean",
+    "pub": "gulp build & npm publish & gulp clean"
   },
   "repository": {
     "type": "git",
@@ -33,19 +35,21 @@
   },
   "devDependencies": {
     "@types/chai": "^3.4.34",
-    "@types/mocha": "^2.2.38",
     "@types/express": "^4.0.35",
+    "@types/mocha": "^2.2.38",
     "@types/mongodb": "^2.1.41",
     "@types/node": "^7.0.12",
+    "chai": "^3.5.0",
     "gulp": "^3.9.1",
     "gulp-clean": "^0.3.2",
     "gulp-rename": "^1.2.2",
+    "gulp-tslint": "^8.0.0",
     "gulp-typescript": "^3.1.4",
     "gulp-watch": "^4.3.11",
+    "mocha": "^3.2.0",
     "run-sequence": "^1.2.2",
     "supertest": "^3.0.0",
-    "typescript": "^2.1.5",
-    "mocha": "^3.2.0",
-    "chai": "^3.5.0"
+    "tslint": "^5.1.0",
+    "typescript": "^2.1.5"
   }
 }

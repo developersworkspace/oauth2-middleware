@@ -1,15 +1,14 @@
 // Imports
 import express = require("express");
 
-
 // Imports middleware
 import { OAuth2Middleware } from './index';
 import bodyParser = require('body-parser');
 import cookieParser = require('cookie-parser');
 
 // Imports repositories
-import { Repository, IRepository } from './repositories/repository';
 import { MockRepository } from './repositories/mock-repository';
+import { IRepository, Repository } from './repositories/repository';
 
 export class WebApi {
 
@@ -24,7 +23,7 @@ export class WebApi {
     }
 
     private configureMiddleware(app: express.Express) {
-        app.use(cookieParser())
+        app.use(cookieParser());
         app.use(bodyParser.json());
         app.use(bodyParser.urlencoded({ extended: false }));
     }
@@ -41,8 +40,6 @@ export class WebApi {
         this.app.listen(this.port);
     }
 }
-
-
 
 // import * as mongo from 'mongodb';
 // import { Db } from 'mongodb';
@@ -75,9 +72,7 @@ function validateCredentialsFn(clientId, username: string, password: string): Pr
 }
 
 if (require.main === module) {
-    let port = 3000;
-    let api = new WebApi(express(), port, new MockRepository(), validateCredentialsFn, 120000, 30000, 1800000);
+    const port = 3000;
+    const api = new WebApi(express(), port, new MockRepository(), validateCredentialsFn, 120000, 30000, 1800000);
     api.run();
 }
-
-

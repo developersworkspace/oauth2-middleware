@@ -12,14 +12,14 @@ export class Repository implements IRepository {
 
     public saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string, expiryTimestamp: number): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('authorize_infomation');
+            const collection = db.collection('authorize_infomation');
             return collection.insert({
-                id: id,
-                responseType: responseType,
-                clientId: clientId,
-                redirectUri: redirectUri,
-                state: state,
-                expiryTimestamp: expiryTimestamp
+                id,
+                responseType,
+                clientId,
+                redirectUri,
+                state,
+                expiryTimestamp,
             });
         }).then((result: any) => {
             return true;
@@ -28,9 +28,9 @@ export class Repository implements IRepository {
 
     public findAuthorizeInformationById(id: string): Promise<any> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('authorize_infomation');
+            const collection = db.collection('authorize_infomation');
             return collection.findOne({
-                id: id
+                id,
             });
         }).then((result: any) => {
             if (result == null) {
@@ -41,16 +41,16 @@ export class Repository implements IRepository {
                 id: result.id,
                 responseType: result.responseType,
                 clientId: result.clientId,
-                redirectUri: result.redirectUri
+                redirectUri: result.redirectUri,
             };
         });
     }
 
     public findClientByClientId(clientId: string): Promise<any> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('clients');
+            const collection = db.collection('clients');
             return collection.findOne({
-                clientId: clientId
+                clientId,
             });
         }).then((result: any) => {
             if (result) {
@@ -61,20 +61,20 @@ export class Repository implements IRepository {
                 name: result.name,
                 clientId: result.clientId,
                 clientSecret: result.clientSecret,
-                redirectUris: result.redirectUris
+                redirectUris: result.redirectUris,
             };
         });
     }
 
     public saveCode(id: string, code: string, clientId: string, username: string, expiryTimestamp: number): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('codes');
+            const collection = db.collection('codes');
             return collection.insert({
-                id: id,
-                code: code,
-                clientId: clientId,
-                username: username,
-                expiryTimestamp: expiryTimestamp
+                id,
+                code,
+                clientId,
+                username,
+                expiryTimestamp,
             });
         }).then((result: any) => {
             return true;
@@ -83,25 +83,24 @@ export class Repository implements IRepository {
 
     public saveAccessToken(code: string, accessToken: string, expiryTimestamp: number, scope: string, username: string): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('access_tokens');
+            const collection = db.collection('access_tokens');
             return collection.insert({
-                code: code,
-                accessToken: accessToken,
-                expiryTimestamp: expiryTimestamp,
-                scope: scope,
-                username: username
+                code,
+                accessToken,
+                expiryTimestamp,
+                scope,
+                username,
             });
         }).then((result: any) => {
             return true;
         });
     }
 
-
     public findCodeByCode(code: string): Promise<any> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('codes');
+            const collection = db.collection('codes');
             return collection.findOne({
-                code: code
+                code,
             });
         }).then((result: any) => {
             if (result) {
@@ -110,20 +109,20 @@ export class Repository implements IRepository {
 
             return {
                 id: result.id,
-                code: code,
+                code,
                 clientId: result.clientId,
-                username: result.username
+                username: result.username,
             };
         });
     }
 
     public saveSession(sessionId: string, username: string, clientId: string): Promise<Boolean> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('sessions');
+            const collection = db.collection('sessions');
             return collection.insert({
-                sessionId: sessionId,
-                username: username,
-                clientId: clientId
+                sessionId,
+                username,
+                clientId,
             });
         }).then((result: any) => {
             return true;
@@ -132,9 +131,9 @@ export class Repository implements IRepository {
 
     public findSessionBySessionId(sessionId: string): Promise<any> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('sessions');
+            const collection = db.collection('sessions');
             return collection.findOne({
-                sessionId: sessionId
+                sessionId,
             });
         }).then((result: any) => {
             if (result) {
@@ -144,16 +143,16 @@ export class Repository implements IRepository {
             return {
                 sessionId: result.sessionId,
                 username: result.username,
-                clientId: result.clientId
+                clientId: result.clientId,
             };
         });
     }
 
     findAccessTokenByAccessToken(accessToken: string): Promise<any> {
         return this.mongoClient.connect(this.uri).then((db: Db) => {
-            let collection = db.collection('access_tokens');
+            const collection = db.collection('access_tokens');
             return collection.findOne({
-                accessToken: accessToken
+                accessToken,
             });
         }).then((result: any) => {
             if (result) {
@@ -166,8 +165,8 @@ export class Repository implements IRepository {
                 expires_in: result.expiryTimestamp - new Date().getTime(),
                 scope: result.scope,
                 info: {
-                    username: result.username
-                }
+                    username: result.username,
+                },
             };
         });
     }

@@ -1,10 +1,10 @@
 // Imports
+import * as co from 'co';
 import { Express, Request, Response, Router } from "express";
 import * as express from 'express';
-import * as uuid from 'uuid';
 import * as fs from 'graceful-fs';
 import * as Handlebars from 'handlebars';
-import * as co from 'co';
+import * as uuid from 'uuid';
 
 // Imports repositories
 import { IRepository } from './repositories/repository';
@@ -32,23 +32,23 @@ export class OAuth2Middleware {
 
     private login(req: Request, res: Response, next: Function) {
 
-        let id = req.query.id;
+        const id = req.query.id;
 
         if (this.service.isEmptyOrSpace(id)) {
             res.status(400).send('Invalid parameters provided');
             return;
         }
 
-        let self = this;
+        const self = this;
 
-        co(function* () {
-            let findAuthorizeInformationByIdResult = yield self.service.findAuthorizeInformationById(id);
-            let findNameByClientIdResult = yield self.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
+        co(function*() {
+            const findAuthorizeInformationByIdResult = yield self.service.findAuthorizeInformationById(id);
+            const findNameByClientIdResult = yield self.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
 
             self.renderPage(res, 'login.html', {
-                id: id,
+                id,
                 name: findNameByClientIdResult,
-                message: null
+                message: null,
             }, 200);
         }).catch((err: Error) => {
             res.status(400).send(err.message);
@@ -58,20 +58,19 @@ export class OAuth2Middleware {
 
     private submitLogin(req: Request, res: Response, next: Function) {
 
-        let username = req.body.username;
-        let password = req.body.password;
-        let id = req.query.id;
+        const username = req.body.username;
+        const password = req.body.password;
+        const id = req.query.id;
 
-        let oauth2_session_id = uuid.v4();
+        const oauth2_session_id = uuid.v4();
 
-
-        let self = this;
+        const self = this;
         let name = null;
 
-        co(function* () {
-            let findAuthorizeInformationByIdResult = yield self.service.findAuthorizeInformationById(id);
-            let findNameByClientIdResult = yield self.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
-            let validateCredentialsResult = yield self.service.validateCredentials(findAuthorizeInformationByIdResult.clientId, username, password);
+        co(function*() {
+            const findAuthorizeInformationByIdResult = yield self.service.findAuthorizeInformationById(id);
+            const findNameByClientIdResult = yield self.service.findNameByClientId(findAuthorizeInformationByIdResult.clientId);
+            const validateCredentialsResult = yield self.service.validateCredentials(findAuthorizeInformationByIdResult.clientId, username, password);
 
             name = findNameByClientIdResult.name;
 
@@ -83,39 +82,39 @@ export class OAuth2Middleware {
                 throw new Error('Invalid credentials provided');
             }
 
-            let generateCodeResult = yield self.service.generateCode(id, findAuthorizeInformationByIdResult.clientId, username);
+            const generateCodeResult = yield self.service.generateCode(id, findAuthorizeInformationByIdResult.clientId, username);
 
             if (generateCodeResult == null) {
                 throw Error('Failed to generate code');
             }
 
-            let saveSessionResult = yield self.service.saveSession(oauth2_session_id, username, findAuthorizeInformationByIdResult.clientId);
+            const saveSessionResult = yield self.service.saveSession(oauth2_session_id, username, findAuthorizeInformationByIdResult.clientId);
 
             if (!saveSessionResult) {
                 throw new Error('Failed to save session');
             }
 
-            res.cookie(`oauth2_session_id_${findAuthorizeInformationByIdResult.clientId}`, oauth2_session_id, { maxAge: 1800, });
+            res.cookie(`oauth2_session_id_${findAuthorizeInformationByIdResult.clientId}`, oauth2_session_id, { maxAge: 1800 });
             res.redirect(`${findAuthorizeInformationByIdResult.redirectUri}?token=${generateCodeResult}&state=${findAuthorizeInformationByIdResult.state}`);
 
         }).catch((err: Error) => {
             self.renderPage(res, 'login.html', {
-                id: id,
-                name: name,
-                message: err.message
+                id,
+                name,
+                message: err.message,
             }, 401);
         });
     }
 
     private authorize(req: Request, res: Response, next: Function) {
-        let id = uuid.v4();
-        let responseType = req.query.response_type;
-        let clientId = req.query.client_id;
-        let redirectUri = req.query.redirect_uri;
-        let scope = req.query.scope;
-        let state = req.query.state;
+        const id = uuid.v4();
+        const responseType = req.query.response_type;
+        const clientId = req.query.client_id;
+        const redirectUri = req.query.redirect_uri;
+        const scope = req.query.scope;
+        const state = req.query.state;
 
-        let oauth2_session_id = req.cookies == undefined ? null : (req.cookies[`oauth2_session_id_${clientId}`] == undefined ? null : req.cookies[`oauth2_session_id_${clientId}`]);
+        const oauth2_session_id = req.cookies == undefined ? null : (req.cookies[`oauth2_session_id_${clientId}`] == undefined ? null : req.cookies[`oauth2_session_id_${clientId}`]);
 
         if (this.service.isEmptyOrSpace(responseType) || this.service.isEmptyOrSpace(clientId) || this.service.isEmptyOrSpace(redirectUri) || this.service.isEmptyOrSpace(scope)) {
             res.status(400).send('Invalid parameters provided');
@@ -127,13 +126,12 @@ export class OAuth2Middleware {
             return;
         }
 
+        const self = this;
 
-        let self = this;
+        co(function*() {
+            const findClientByClientIdResult = yield self.service.findClientByClientId(clientId, redirectUri);
 
-        co(function* () {
-            let findClientByClientIdResult = yield self.service.findClientByClientId(clientId, redirectUri);
-
-            let saveAuthorizeInformationResult = yield self.service.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
+            const saveAuthorizeInformationResult = yield self.service.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state);
 
             if (!saveAuthorizeInformationResult) {
                 throw new Error('Failed to save authorize information');
@@ -144,7 +142,7 @@ export class OAuth2Middleware {
                 return;
             }
 
-            let findSessionBySessionIdResult = yield self.service.findSessionBySessionId(oauth2_session_id, clientId).catch((err: Error) => {
+            const findSessionBySessionIdResult = yield self.service.findSessionBySessionId(oauth2_session_id, clientId).catch((err: Error) => {
                 return null;
             });
 
@@ -153,7 +151,7 @@ export class OAuth2Middleware {
                 return;
             }
 
-            let generateCodeResult = yield self.service.generateCode(id, clientId, findSessionBySessionIdResult.username);
+            const generateCodeResult = yield self.service.generateCode(id, clientId, findSessionBySessionIdResult.username);
 
             res.redirect(`${redirectUri}?token=${generateCodeResult}&state=${state}`);
 
@@ -163,11 +161,11 @@ export class OAuth2Middleware {
     }
 
     private token(req: Request, res: Response, next: Function) {
-        let clientId = req.query.client_id;
-        let clientSecret = req.query.client_secret;
-        let grantType = req.query.grant_type;
-        let code = req.query.code;
-        let redirectUri = req.query.redirect_uri;
+        const clientId = req.query.client_id;
+        const clientSecret = req.query.client_secret;
+        const grantType = req.query.grant_type;
+        const code = req.query.code;
+        const redirectUri = req.query.redirect_uri;
         if (this.service.isEmptyOrSpace(clientId) || this.service.isEmptyOrSpace(clientSecret) || this.service.isEmptyOrSpace(grantType) || this.service.isEmptyOrSpace(code) || this.service.isEmptyOrSpace(redirectUri)) {
             res.status(400).send('Invalid parameters provided');
             return;
@@ -178,13 +176,12 @@ export class OAuth2Middleware {
             return;
         }
 
+        const self = this;
 
-        let self = this;
+        co(function*() {
+            const findCodeByCodeResult = yield self.service.findCodeByCode(clientId, clientSecret, code, redirectUri);
 
-        co(function* () {
-            let findCodeByCodeResult = yield self.service.findCodeByCode(clientId, clientSecret, code, redirectUri);
-
-            let generateAccessTokenObjectResult = yield self.service.generateAccessTokenObject(code, clientId, findCodeByCodeResult.username, 'read');
+            const generateAccessTokenObjectResult = yield self.service.generateAccessTokenObject(code, clientId, findCodeByCodeResult.username, 'read');
 
             if (generateAccessTokenObjectResult == null) {
                 throw new Error('Failed to generate access token object');
@@ -216,23 +213,12 @@ export class OAuth2Middleware {
                 return;
             }
 
-            let template = Handlebars.compile(html);
+            const template = Handlebars.compile(html);
 
-            let result = template(data);
+            const result = template(data);
 
             res.status(status).send(result);
 
         });
     }
 }
-
-// http://localhost:3000/auth/authorize?response_type=code&client_id=1234567890&redirect_uri=http://demo1.local/callback&scope=read
-// http://localhost:3000/auth/token?client_id=CLIENT_ID&client_secret=CLIENT_SECRET&grant_type=authorization_code&code=AUTHORIZATION_CODE&redirect_uri=CALLBACK_URL
-
-
-
-// http://localhost:3000/auth/token?client_id=1234567890&client_secret=0987654321&grant_type=authorization_code&code=32efbb19-9451-44d5-8d83-eb9cee0edc77&redirect_uri=http://demo2.local/callback
-
-
-
-// http://localhost:3000/auth/authorize?response_type=code&client_id=8d851ff6-9571-4a29-acaf-5d1ec8979cb5&redirect_uri=http://localhost:3000/callback&scope=read&state=40335

@@ -1,10 +1,9 @@
 // Imports
-import * as uuid from 'uuid';
 import * as co from 'co';
+import * as uuid from 'uuid';
 
 // Imports repositories
 import { IRepository } from './../repositories/repository';
-
 
 export class Service {
 
@@ -13,7 +12,7 @@ export class Service {
     }
 
     generateCode(id: string, clientId: string, username: string): Promise<string> {
-        let code = uuid.v4();
+        const code = uuid.v4();
         return this.repository.saveCode(id, code, clientId, username, new Date().getTime() + this.codeExpiryMiliseconds).then((result: Boolean) => {
             return code;
         });
@@ -21,31 +20,30 @@ export class Service {
 
     generateAccessTokenObject(code: string, clientId: string, username: string, scope: string): Promise<any> {
 
-        let accessToken = uuid.v4();
-        let expiresIn = this.accessTokenExpiryMiliseconds;
-        let expiryTimestamp = new Date().getTime() + expiresIn;
+        const accessToken = uuid.v4();
+        const expiresIn = this.accessTokenExpiryMiliseconds;
+        const expiryTimestamp = new Date().getTime() + expiresIn;
 
         return this.repository.saveAccessToken(code, accessToken, expiryTimestamp, scope, username).then((saveAccessTokenResult: Boolean) => {
             return Promise.resolve({
                 access_token: accessToken,
                 token_type: "bearer",
                 expires_in: expiresIn,
-                scope: scope,
+                scope,
                 info: {
-                    username: username
-                }
+                    username,
+                },
             });
         });
     }
 
-
     findCodeByCode(clientId: string, clientSecret: string, code: string, redirectUri: string): Promise<any> {
 
-        let self = this;
-        return co(function* () {
-            let findCodeByCodeResult = yield self.repository.findCodeByCode(code);
+        const self = this;
+        return co(function*() {
+            const findCodeByCodeResult = yield self.repository.findCodeByCode(code);
 
-            if (findCodeByCodeResult == null) {
+            if (findCodeByCodeResult === null) {
                 throw new Error('Invalid code provided');
             }
 
@@ -53,23 +51,23 @@ export class Service {
                 throw new Error('Expired code provided');
             }
 
-            let findAuthorizeInformationByIdResult = yield self.findAuthorizeInformationById(findCodeByCodeResult.id);
+            const findAuthorizeInformationByIdResult = yield self.findAuthorizeInformationById(findCodeByCodeResult.id);
 
-            if (findAuthorizeInformationByIdResult == null) {
+            if (findAuthorizeInformationByIdResult === null) {
                 throw new Error('Invalid id attached to code provided');
             }
 
-            if (findAuthorizeInformationByIdResult.clientId != clientId) {
+            if (findAuthorizeInformationByIdResult.clientId !== clientId) {
                 throw new Error('Invalid client id provided');
             }
 
-            if (findAuthorizeInformationByIdResult.redirectUri != redirectUri) {
+            if (findAuthorizeInformationByIdResult.redirectUri !== redirectUri) {
                 throw new Error('Invalid redirect uri provided');
             }
 
-            let findClientByClientIdResult = yield self.repository.findClientByClientId(clientId);
+            const findClientByClientIdResult = yield self.repository.findClientByClientId(clientId);
 
-            if (findClientByClientIdResult == null) {
+            if (findClientByClientIdResult === null) {
                 throw new Error('Invalid client id provided');
             }
 
@@ -88,7 +86,7 @@ export class Service {
 
     findAuthorizeInformationById(id: string): Promise<any> {
         return this.repository.findAuthorizeInformationById(id).then((findAuthorizeInformationByIdResult: any) => {
-            if (findAuthorizeInformationByIdResult == null) {
+            if (findAuthorizeInformationByIdResult === null) {
                 throw new Error('Invalid id provided');
             }
 
@@ -108,11 +106,11 @@ export class Service {
 
     findClientByClientId(clientId: string, redirectUri: string): Promise<Boolean> {
         return this.repository.findClientByClientId(clientId).then((findClientByClientIdResult: any) => {
-            if (findClientByClientIdResult == null) {
+            if (findClientByClientIdResult === null) {
                 throw new Error('Invalid client id provided');
             }
 
-            if (findClientByClientIdResult.redirectUris.indexOf(redirectUri) == -1) {
+            if (findClientByClientIdResult.redirectUris.indexOf(redirectUri) === -1) {
                 throw new Error('Invalid redirect uri provided');
             }
             return findClientByClientIdResult;
@@ -120,7 +118,7 @@ export class Service {
     }
 
     saveAuthorizeInformation(id: string, responseType: string, clientId: string, redirectUri: string, scope: string, state: string): Promise<Boolean> {
-        let expiryTimestamp = new Date().getTime() + this.idExpiryMiliseconds;
+        const expiryTimestamp = new Date().getTime() + this.idExpiryMiliseconds;
         return this.repository.saveAuthorizeInformation(id, responseType, clientId, redirectUri, scope, state, expiryTimestamp);
     }
 
@@ -131,11 +129,11 @@ export class Service {
     findSessionBySessionId(sessionId: string, clientId: string): Promise<string> {
         return this.repository.findSessionBySessionId(sessionId)
             .then((findSessionBySessionIdResult: any) => {
-                if (findSessionBySessionIdResult == null) {
+                if (findSessionBySessionIdResult === null) {
                     throw new Error('Invalid session id provided');
                 }
 
-                if (findSessionBySessionIdResult.clientId != clientId) {
+                if (findSessionBySessionIdResult.clientId !== clientId) {
                     throw new Error('Invalid session id provided');
                 }
 
@@ -145,14 +143,13 @@ export class Service {
 
     findAccessTokenByAccessToken(accessToken: string): Promise<any> {
 
-        let self = this;
-        return co(function* () {
-            let findAccessTokenByAccessTokenResult = yield self.repository.findAccessTokenByAccessToken(accessToken);
+        const self = this;
+        return co(function*() {
+            const findAccessTokenByAccessTokenResult = yield self.repository.findAccessTokenByAccessToken(accessToken);
 
-            if (findAccessTokenByAccessTokenResult == null) {
+            if (findAccessTokenByAccessTokenResult === null) {
                 throw new Error('Invalid access token provided');
             }
-
 
             if (findAccessTokenByAccessTokenResult.expires_in <= 0) {
                 throw new Error('Expired access token provided');
@@ -165,6 +162,6 @@ export class Service {
     }
 
     isEmptyOrSpace(str) {
-        return str == undefined || str === null || str.match(/^ *$/) !== null;
+        return str === undefined || str === null || str.match(/^ *$/) !== null;
     }
 }

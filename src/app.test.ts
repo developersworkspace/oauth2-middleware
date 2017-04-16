@@ -1,6 +1,6 @@
 // Imports
-import 'mocha';
 import { expect } from 'chai';
+import 'mocha';
 import * as request from 'supertest';
 import express = require("express");
 
@@ -10,41 +10,41 @@ import { WebApi } from './app';
 // Imports repositories
 import { MockRepository } from './repositories/mock-repository';
 
-let validClientId = '1234567890';
-let invalidClientId = 'fakeclientid';
+const validClientId = '1234567890';
+const invalidClientId = 'fakeclientid';
 
-let validClientSecret = '0987654321';
-let invalidClientSecret = 'fakeclientsecret';
+const validClientSecret = '0987654321';
+const invalidClientSecret = 'fakeclientsecret';
 
-let validRedirectUri = 'http://demo1.local/callback';
-let invalidRedirectUri = 'fakeredirecturi';
+const validRedirectUri = 'http://demo1.local/callback';
+const invalidRedirectUri = 'fakeredirecturi';
 
-let validScope = 'read';
+const validScope = 'read';
 
-let validId = 'fe6c6cd5-3d3f-49ed-838b-52f3383cb733';
-let invalidId = 'fakeid';
+const validId = 'fe6c6cd5-3d3f-49ed-838b-52f3383cb733';
+const invalidId = 'fakeid';
 
-let validUsername = 'demousername';
-let invalidUsername = 'fakeusername';
+const validUsername = 'demousername';
+const invalidUsername = 'fakeusername';
 
-let validPassword = 'demopassword';
-let invalidPassword = 'fakepassword';
+const validPassword = 'demopassword';
+const invalidPassword = 'fakepassword';
 
-let validResponseType = 'code';
-let invalidResponseType = 'fakeresponsetype';
+const validResponseType = 'code';
+const invalidResponseType = 'fakeresponsetype';
 
-let validCode = '9ec40cd1-2750-41aa-b9ca-39dd8da9835d';
-let invalidCode = 'fakecode';
+const validCode = '9ec40cd1-2750-41aa-b9ca-39dd8da9835d';
+const invalidCode = 'fakecode';
 
-let validGrantType = 'authorization_code';
-let invalidGrantType = 'fakegranttype';
+const validGrantType = 'authorization_code';
+const invalidGrantType = 'fakegranttype';
 
-let validSessionId = '123';
-let validSessionId2 = '456';
-let invalidSessionId = 'fakesessionid';
+const validSessionId = '123';
+const validSessionId2 = '456';
+const invalidSessionId = 'fakesessionid';
 
-let validAccessToken = '123';
-let invalidAccessToken = 'fakeaccesstoken';
+const validAccessToken = '123';
+const invalidAccessToken = 'fakeaccesstoken';
 
 function validateCredentialsFn(clientId, username: string, password: string): Promise<Boolean> {
   if (username == 'demousername' && password == 'demopassword') {
@@ -64,17 +64,16 @@ describe('GET /auth/authorize', () => {
     repository = new MockRepository();
     api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
 
-    let p1 = repository.saveSession(validSessionId, validUsername, validClientId);
-    let p2 = repository.saveSession(validSessionId2, validUsername, invalidClientId);
+    const p1 = repository.saveSession(validSessionId, validUsername, validClientId);
+    const p2 = repository.saveSession(validSessionId2, validUsername, invalidClientId);
 
     Promise.all([
       p1,
-      p2
+      p2,
     ]).then((result) => {
       done();
     });
   });
-
 
   it('should respond with status code 400 given no query parameters', (done) => {
     request(api.getApp())
@@ -99,7 +98,6 @@ describe('GET /auth/authorize', () => {
       .get(`/auth/authorize?response_type=${validResponseType}&client_id=${validClientId}&redirect_uri=${invalidRedirectUri}&scope=${validScope}`)
       .expect(400, done);
   });
-
 
   it('should respond with status code 302 given valid parameters', (done) => {
     request(api.getApp())
@@ -133,8 +131,7 @@ describe('GET /auth/authorize', () => {
   });
 });
 
-
-describe('GET /auth/login', function () {
+describe('GET /auth/login', function() {
 
   this.timeout(20000);
 
@@ -143,10 +140,10 @@ describe('GET /auth/login', function () {
     repository = new MockRepository();
     api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
 
-    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
+    const p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
 
     Promise.all([
-      p1
+      p1,
     ]).then((result) => {
       done();
     });
@@ -179,7 +176,7 @@ describe('GET /auth/login', function () {
   });
 });
 
-describe('POST /auth/login', function () {
+describe('POST /auth/login', function() {
 
   this.timeout(20000);
 
@@ -188,12 +185,12 @@ describe('POST /auth/login', function () {
     repository = new MockRepository();
     api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
 
-    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
-    let p2 = repository.saveCode(validId, validCode, validClientId, validUsername, 2000);
+    const p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
+    const p2 = repository.saveCode(validId, validCode, validClientId, validUsername, 2000);
 
     Promise.all([
       p1,
-      p2
+      p2,
     ]).then((result) => {
       done();
     });
@@ -204,7 +201,7 @@ describe('POST /auth/login', function () {
       .post(`/auth/login?id=${invalidId}`)
       .send({
         username: invalidUsername,
-        password: invalidPassword
+        password: invalidPassword,
       })
       .expect(401, done);
   });
@@ -214,7 +211,7 @@ describe('POST /auth/login', function () {
       .post(`/auth/login?id=${validId}`)
       .send({
         username: invalidUsername,
-        password: invalidPassword
+        password: invalidPassword,
       })
       .expect(401, done);
   });
@@ -224,7 +221,7 @@ describe('POST /auth/login', function () {
       .post(`/auth/login?id=${validId}`)
       .send({
         username: validUsername,
-        password: invalidPassword
+        password: invalidPassword,
       })
       .expect(401, done);
   });
@@ -234,7 +231,7 @@ describe('POST /auth/login', function () {
       .post(`/auth/login?id=${validId}`)
       .send({
         username: validUsername,
-        password: validPassword
+        password: validPassword,
       })
       .expect('Location', /.*\?token=[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}/)
       .expect(302, done);
@@ -246,14 +243,14 @@ describe('POST /auth/login', function () {
         .post(`/auth/login?id=${validId}`)
         .send({
           username: validUsername,
-          password: validPassword
+          password: validPassword,
         })
         .expect(401, done);
     });
   });
 });
 
-describe('GET /auth/token', function () {
+describe('GET /auth/token', function() {
 
   this.timeout(20000);
 
@@ -262,12 +259,12 @@ describe('GET /auth/token', function () {
     repository = new MockRepository();
     api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
 
-    let p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
-    let p2 = repository.saveCode(validId, validCode, validClientId, validUsername, new Date().getTime() + 2000);
+    const p1 = repository.saveAuthorizeInformation(validId, validResponseType, validClientId, validRedirectUri, validScope, null, new Date().getTime() + 2000);
+    const p2 = repository.saveCode(validId, validCode, validClientId, validUsername, new Date().getTime() + 2000);
 
     Promise.all([
       p1,
-      p2
+      p2,
     ]).then((result) => {
       done();
     });
@@ -324,20 +321,19 @@ describe('GET /auth/token', function () {
   });
 });
 
-
-describe('GET /auth/getuser', function () {
+describe('GET /auth/getuser', function() {
 
   this.timeout(20000);
-  
+
   beforeEach((done: Function) => {
 
     repository = new MockRepository();
     api = new WebApi(express(), 8000, repository, validateCredentialsFn, 2000, 2000, 2000);
 
-    let p1 = repository.saveAccessToken(validCode, validAccessToken, new Date().getTime() + 2000, validScope, validUsername);
+    const p1 = repository.saveAccessToken(validCode, validAccessToken, new Date().getTime() + 2000, validScope, validUsername);
 
     Promise.all([
-      p1
+      p1,
     ]).then((result) => {
       done();
     });
@@ -375,7 +371,7 @@ describe('GET /auth/getuser', function () {
 });
 
 function wait(miliSeconds: number) {
-  return new Promise(function (resolve, reject) {
+  return new Promise(function(resolve, reject) {
     setTimeout(() => {
       resolve();
     }, miliSeconds);
